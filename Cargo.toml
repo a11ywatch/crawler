@@ -1,0 +1,25 @@
+[package]
+name = "a11y_watcher"
+version = "0.1.0"
+authors = ["jeffreymendez <jeffmendez19@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rocket = "0.4.1"
+spider = "1.1.2"
+reqwest = { version = "0.10.6", features = ["blocking"] }
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+dotenv = "0.15.0"
+dotenv_codegen = "0.15.0"
+tokio = { version = "0.2", features = ["full"] }
+futures = "0.3"
+url = "2.1.1"
+num_cpus = "1.13.0"
+sysinfo = "0.3.19"
+
+[dependencies.rocket_contrib]
+version = "0.4.2"
+default-features = false
+features = ["json"]
