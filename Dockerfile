@@ -9,9 +9,8 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-# ignore cargo build step due to run auto build
 RUN cargo build --release
 
-CMD [ "./target/release/a11y-watcher"]
+CMD [ "./target/release/a11y-watcher" ]
 
 

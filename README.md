@@ -1,6 +1,6 @@
 # crawler
 
-crawls web pages to gather all possible pages/urls
+crawls websites to gather all possible urls
 
 ## Getting Started
 
