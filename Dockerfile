@@ -9,8 +9,8 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-RUN cargo build --release
+RUN cargo build --release && rm src/*.rs
 
-CMD [ "./target/release/a11y-watcher" ]
+CMD [ "/target/release/a11y-watcher" ]
 
 
