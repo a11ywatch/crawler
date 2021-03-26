@@ -4,8 +4,8 @@
  * LICENSE file in the root directory of this source tree.
  **/
 
-use a11y_watcher;
+use crawler;
 
 fn main() {
-    a11y_watcher::rocket().launch();
+    crawler::rocket().launch();
 }

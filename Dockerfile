@@ -6,9 +6,11 @@ RUN cargo build --release
 
 FROM debian:stretch AS package
 COPY --from=build /usr/src/app/target/release/crawler ./
+RUN apt-get update -y && apt-get install -y libssl-dev
 
 EXPOSE 8000
+
 ARG CRAWL_URL
-ENV ROCKET_ADDRESS=0.0.0.0
-ENV ROCKET_PORT=8000
+ENV ROCKET_ADDRESS="0.0.0.0"
+
 CMD ["./crawler"]
