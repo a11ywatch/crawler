@@ -1,0 +1,10 @@
+version: "3.0"
+services:
+  watcher:
+    container_name: watcher
+    env_file: .env
+    build: .
+    ports:
+      - "8000:8000"
+    environment: 
+      - CRAWL_URL=http://api:8080/api/website-crawl-background

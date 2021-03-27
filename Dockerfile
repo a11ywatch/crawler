@@ -1,17 +1,17 @@
-FROM rustlang/rust:nightly AS build
+FROM rustlang/rust:nightly
 
-WORKDIR /usr/src/app
-COPY . .
-RUN cargo build --release
-
-FROM debian:stretch AS package
-COPY --from=build /usr/src/app/target/release/crawler ./
-RUN apt-get update -y && apt-get install -y libssl-dev
-EXPOSE 8000
+ENV ROCKET_ADDRESS=0.0.0.0
+ENV ROCKET_PORT=8000
 
 ARG CRAWL_URL
 ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl}"
-ENV ROCKET_ADDRESS=0.0.0.0
+ENV ROCKET_ENV="dev"
+RUN apt-get update -y && apt-get install -y openssl libssl-dev
+
+WORKDIR /usr/src/app
+
 RUN echo "CRAWL_URL=$CRAWL_URL" >> .env
 
-CMD ["./crawler"]
+COPY . .
+
+CMD [ "cargo", "run"]

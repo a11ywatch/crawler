@@ -20,7 +20,6 @@ use super::monitor::monitor_page;
 #[post("/crawl", format = "json", data = "<user>")]
 pub fn crawl_page(user: Json<WebPage>) -> String {
 	let domain = String::from(&user.url);
-	let domain_clone = domain.clone();
 	let mut website: Website = Website::new(&domain);
 	let mut pages: Vec<String> = Vec::new();
 
@@ -39,8 +38,8 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 	};
 
 	let serialized = serde_json::to_string(&web_site).unwrap();
-
+	let serialized_copy = serialized.clone();
 	monitor_page(serialized);
 
-	format!("crawled {}", domain_clone)
+	serialized_copy
 }

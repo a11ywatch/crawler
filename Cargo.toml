@@ -1,18 +1,23 @@
 [package]
-name = "crawler"
-version = "0.1.0"
+name = "website_crawler"
+version = "0.1.2"
 authors = ["jeffreymendez <jeffmendez19@gmail.com>"]
 edition = "2018"
+description = "crawl all urls on a website async & sync"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/A11yWatch/crawler"
+keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-generator"]
+categories = ["asynchronous", "accessibility", "parsing"]
 
 [dependencies]
 rocket = "0.4.1"
 spider = "1.1.2"
-reqwest = { version = "0.10.6", features = ["blocking"] }
+reqwest = { version = "0.10.6" }
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
 dotenv = "0.15.0"
-dotenv_codegen = "0.15.0"
 tokio = { version = "0.2", features = ["full"] }
 futures = "0.3"
 url = "2.1.1"

@@ -4,8 +4,20 @@
  * LICENSE file in the root directory of this source tree.
  **/
 
-use crawler;
+use std::env;
+use website_crawler;
 
 fn main() {
-    crawler::rocket().launch();
+    let mut page_url = "http://api:8080/api/website-crawl-background".to_string();
+
+    for (key, value) in env::vars() {
+        if key == "CRAWL_URL" {
+            page_url = value.to_string();
+        }
+    }
+
+    println!("{}", page_url);
+    env::set_var("CRAWL_URL", page_url);
+
+    website_crawler::rocket().launch();
 }

@@ -8,10 +8,8 @@ ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl}"
 
 WORKDIR /usr/src/app
 
-RUN RUN echo "CRAWL_URL=$CRAWL_URL" >> .env
+RUN echo "CRAWL_URL=$CRAWL_URL" >> .env
 
 COPY . .
 
 CMD [ "cargo", "run"]
-
-
