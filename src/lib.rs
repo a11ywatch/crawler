@@ -9,7 +9,8 @@
 #[macro_use]
 extern crate rocket;
 extern crate rocket_contrib;
-// #[macro_use] extern crate dotenv_codegen;
+#[macro_use]
+extern crate dotenv_codegen;
 extern crate reqwest;
 extern crate spider;
 

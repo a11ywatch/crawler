@@ -4,8 +4,11 @@ ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=8000
 
 ARG CRAWL_URL
+ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl}"
 
 WORKDIR /usr/src/app
+
+RUN RUN echo "CRAWL_URL=$CRAWL_URL" >> .env
 
 COPY . .
 

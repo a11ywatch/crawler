@@ -4,7 +4,6 @@
  * LICENSE file in the root directory of this source tree.
  **/
 
-// #[macro_use] extern crate dotenv_codegen;
 use dotenv;
 use reqwest;
 
@@ -12,8 +11,8 @@ use std::collections::HashMap;
 
 #[tokio::main]
 pub async fn monitor_page(serialized: String) {
-	let crawl_api_url = dotenv::var("CRAWL_URL").unwrap();
-	let page_url = crawl_api_url.to_string();
+	dotenv::dotenv().ok();
+	let page_url = dotenv!("CRAWL_URL").to_string();
 	let mut map = HashMap::new();
 
 	map.insert("data", serialized);

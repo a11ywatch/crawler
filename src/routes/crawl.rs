@@ -6,7 +6,6 @@
 
 use rocket;
 use rocket_contrib;
-// #[macro_use] extern crate dotenv_codegen;
 
 use serde_json;
 use spider;
@@ -20,10 +19,6 @@ use super::monitor::monitor_page;
 
 #[post("/crawl", format = "json", data = "<user>")]
 pub fn crawl_page(user: Json<WebPage>) -> String {
-	// UNCOMMENT IF CAPABLE OF USING ENV VAR PRE+Build
-	// if cfg!(debug_assertions) && crawl_api_url.is_empty() {
-	//     crawl_api_url = dotenv!("CRAWL_URL").to_string();
-	// }
 	let domain = String::from(&user.url);
 	let domain_clone = domain.clone();
 	let mut website: Website = Website::new(&domain);
