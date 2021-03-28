@@ -1,46 +1,61 @@
 # crawler
 
-crawls websites to gather all possible urls
+crawls websites to gather all possible pages
 
 ## Getting Started
 
 Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed.
 
-make sure to create a .env file and add `CRAWL_URL=http://0.0.0.0:8080/api/website-crawl`.
-replace CRAWL_URL with your production endpoint to accept results. A valid endpoint to accept the hook is required for the crawler to work.
-
-1. `curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh`
-2. `cargo run`
+1. `cargo run`
 
 ## Docker 
 
-you can start the service with docker by running `docker build -t crawler . && docker run -dp 8000:8000 crawler`
+Build and run the service.
+
+`docker build -t crawler . && docker run -dp 8000:8000 crawler`
 
 ### compose
 
-use the docker image 
+Build and run the service with compose.
 
-`jeffmendez19/crawler`
+`docker-compose up`
+
+### image 
+
+You can use program as a docker image.
+
+[jeffmendez19/crawler](https://hub.docker.com/repository/docker/jeffmendez19/crawler).
 
 ## Crate 
 
-you can install the program as create at [crate](https://crates.io/crates/website_crawler)
+you can use the [crate](https://crates.io/crates/website_crawler) to setup a tcp server to run on the machine.
 
 ## API
 
-crawl - async determine all urls in a website with a post hook
+#### crawl - async determine all urls in a website with a post hook
 
-POST
+```
+curl --location --request POST 'http://0.0.0.0:8000/crawl' \
+--header 'Content-Type: application/json' \
+--data-raw '{"url": "http://www.drake.com", "id": 0 }'
 
-http://localhost:8000/crawl
-
-Body: { url: https://www.a11ywatch.com, id: 0 }
+// results
+{
+    "pages": [
+        "http://www.drake.com/",
+        "http://www.drake.com/?hsLang=en"
+    ],
+    "user_id": 0,
+    "domain": "http://www.drake.com"
+}
+```
 
 ### ENV
 
-CARGO_RELEASE=false //determine if prod/dev build
-ROCKET_ENV=dev // determine api env
-CRAWL_URL="http://api:8080/api/website-crawl-background" // endpoint to send results
+```
+ROCKET_ENV=dev
+CRAWL_URL="http://api:8080/api/website-crawl-background"
+```
 
 ## LICENSE
 
