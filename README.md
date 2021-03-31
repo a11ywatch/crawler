@@ -1,5 +1,7 @@
 # crawler
 
+[![A11yWatch](https://circleci.com/gh/A11yWatch/crawler.svg?style=svg)](https://circleci.com/gh/A11yWatch/crawler)
+
 crawls websites to gather all possible pages
 
 ## Getting Started
@@ -24,7 +26,7 @@ Build and run the service with compose.
 
 You can use program as a docker image.
 
-[jeffmendez19/crawler](https://hub.docker.com/repository/docker/jeffmendez19/crawler).
+[a11ywatch/crawler](https://hub.docker.com/repository/docker/a11ywatch/crawler).
 
 ## Crate 
 

@@ -39,7 +39,13 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 
 	let serialized = serde_json::to_string(&web_site).unwrap();
 	let serialized_copy = serialized.clone();
-	monitor_page(serialized);
+
+	let handle = thread::spawn(move || {
+		monitor_page(serialized);
+		thread::sleep(Duration::from_millis(1));
+	});
+
+	drop(handle);
 
 	serialized_copy
 }
