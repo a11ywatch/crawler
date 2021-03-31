@@ -1,0 +1,27 @@
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.2
+jobs:
+  crawler:
+    docker:
+      - image: jeffmendez19/crawler
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - node-v1-{{ .Branch }}-{{ checksum "Cargo.lock" }}
+            - node-v1-{{ .Branch }}-
+            - node-v1-
+      - run:
+          command: cargo test
+      - save_cache:
+          paths:
+            - ~/usr/local/lib/target
+          key: node-v1-{{ .Branch }}-{{ checksum "Cargo.lock" }}
+      - codecov/upload:
+          file: './coverage/clover.xml'
+
+workflows:
+  build_and_test:
+    jobs:
+      - crawler
