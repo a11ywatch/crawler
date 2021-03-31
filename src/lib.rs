@@ -8,6 +8,7 @@
 
 #[macro_use]
 extern crate rocket;
+#[macro_use]
 extern crate rocket_contrib;
 
 extern crate reqwest;
@@ -23,14 +24,26 @@ extern crate sysinfo;
 mod interface;
 mod routes;
 
+use rocket_contrib::json::JsonValue;
+
+#[catch(404)]
+fn not_found() -> JsonValue {
+	json!({
+		"status": "error",
+		"reason": "Resource was not found."
+	})
+}
+
 pub fn rocket() -> rocket::Rocket {
-	rocket::ignite().mount(
-		"/",
-		routes![
-			routes::index::landing,
-			routes::status::get_cpu,
-			routes::status::get_server_load,
-			routes::crawl::crawl_page
-		],
-	)
+	rocket::ignite()
+		.mount(
+			"/",
+			routes![
+				routes::index::landing,
+				routes::status::get_cpu,
+				routes::status::get_server_load,
+				routes::crawl::crawl_page
+			],
+		)
+		.register(catchers![not_found])
 }

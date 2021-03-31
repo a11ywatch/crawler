@@ -1,7 +1,22 @@
-#[cfg(test)]
-mod tests {
-	#[test]
-	fn it_works() {
-		assert_eq!(2 + 2, 4);
-	}
+mod common;
+
+use common::*;
+use rocket::http::Status;
+
+#[test]
+fn test_landing() {
+	let client = test_client();
+	let response = client.get("/").dispatch();
+	let status = response.status();
+
+	assert_eq!(status, Status::Ok);
+}
+
+#[test]
+fn test_404() {
+	let client = test_client();
+	let response = client.get("/4").dispatch();
+	let status = response.status();
+
+	assert_eq!(status, Status::NotFound);
 }

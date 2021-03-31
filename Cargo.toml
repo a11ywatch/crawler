@@ -28,3 +28,6 @@ sysinfo = "0.3.19"
 version = "0.4.2"
 default-features = false
 features = ["json"]
+
+[dev-dependencies]
+once_cell = "1.2.0"
