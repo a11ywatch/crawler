@@ -10,15 +10,14 @@
 extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
-
-extern crate reqwest;
-extern crate spider;
-
 #[macro_use]
 extern crate serde_derive;
+
 extern crate dotenv;
 extern crate num_cpus;
+extern crate reqwest;
 extern crate serde_json;
+extern crate spider;
 extern crate sysinfo;
 
 mod interface;

@@ -12,15 +12,18 @@ use std::env;
 pub async fn monitor_page(serialized: String) {
 	let page_url = match env::var("CRAWL_URL") {
 		Ok(val) => val.to_string(),
-		Err(_e) => "http://api:8080/api/website-crawl-background".to_string(),
+		Err(_) => "".to_string(),
 	};
-	let mut map = HashMap::new();
-	map.insert("data", serialized);
 
-	reqwest::Client::new()
-		.post(&page_url)
-		.form(&map)
-		.send()
-		.await
-		.unwrap();
+	if page_url.chars().count() > 1 {
+		let mut map = HashMap::new();
+		map.insert("data", serialized);
+
+		reqwest::Client::new()
+			.post(&page_url)
+			.form(&map)
+			.send()
+			.await
+			.unwrap();
+	}
 }

@@ -16,6 +16,8 @@ use spider::website::Website;
 use super::super::interface::page::Page;
 use super::super::interface::website::WebPage;
 use super::monitor::monitor_page;
+use std::thread;
+use std::time::Duration;
 
 #[post("/crawl", format = "json", data = "<user>")]
 pub fn crawl_page(user: Json<WebPage>) -> String {

@@ -18,6 +18,7 @@ serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
 dotenv = "0.15.0"
+dotenv_codegen = "0.15.0"
 tokio = { version = "0.2", features = ["full"] }
 futures = "0.3"
 url = "2.1.1"
