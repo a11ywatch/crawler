@@ -15,4 +15,4 @@ RUN echo "CRAWL_URL=$CRAWL_URL" >> .env
 
 COPY . .
 
-CMD [ "ROCKET_ENV", "=", "prod", "cargo", "run", "--release"]
+CMD [ "ROCKET_ENV=prod", "cargo", "run", "--release"]
