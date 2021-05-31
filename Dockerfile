@@ -14,4 +14,4 @@ RUN echo "CRAWL_URL=$CRAWL_URL" >> .env
 
 COPY . .
 
-CMD [ "cargo", "run"]
+CMD [ "cargo", "run", "--release"]
