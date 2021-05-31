@@ -39,6 +39,7 @@ pub fn rocket() -> rocket::Rocket {
 			"/",
 			routes![
 				routes::index::landing,
+				routes::status::get_health,
 				routes::status::get_cpu,
 				routes::status::get_server_load,
 				routes::crawl::crawl_page
