@@ -11,8 +11,8 @@ keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-gene
 categories = ["asynchronous", "accessibility", "parsing"]
 
 [dependencies]
-rocket = "0.4.1"
-spider = "1.1.2"
+rocket = "0.4.10"
+spider = "1.2.2"
 reqwest = { version = "0.10.6" }
 serde = "1.0"
 serde_json = "1.0"

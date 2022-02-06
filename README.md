@@ -10,31 +10,23 @@ Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.htm
 
 1. `cargo run`
 
-## Docker 
+or
 
-Build and run the service.
+1. `docker-compose up`
 
-`docker build -t crawler . && docker run -dp 8000:8000 crawler`
+### image
 
-### compose
-
-Build and run the service with compose.
-
-`docker-compose up`
-
-### image 
-
-You can use program as a docker image.
+You can use the program as a docker image.
 
 [a11ywatch/crawler](https://hub.docker.com/repository/docker/a11ywatch/crawler).
 
-## Crate 
+## Crate
 
 you can use the [crate](https://crates.io/crates/website_crawler) to setup a tcp server to run on the machine.
 
 ## API
 
-#### crawl - async determine all urls in a website with a post hook
+`crawl` - async determine all urls in a website with a post hook
 
 ```
 curl --location --request POST 'http://0.0.0.0:8000/crawl' \
@@ -55,7 +47,6 @@ curl --location --request POST 'http://0.0.0.0:8000/crawl' \
 ### ENV
 
 ```
-ROCKET_ENV=dev
 CRAWL_URL="http://api:8080/api/website-crawl-background"
 ```
 
