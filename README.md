@@ -27,6 +27,7 @@ you can use the [crate](https://crates.io/crates/website_crawler) to setup a tcp
 ## API
 
 `crawl` - async determine all urls in a website with a post hook
+`scan` - async determine all urls one by one in a website with a post hook (real-time) [wip](https://github.com/madeindjs/spider/pull/13)
 
 ```
 curl --location --request POST 'http://0.0.0.0:8000/crawl' \

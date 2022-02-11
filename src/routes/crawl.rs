@@ -21,33 +21,34 @@ use std::time::Duration;
 
 #[post("/crawl", format = "json", data = "<user>")]
 pub fn crawl_page(user: Json<WebPage>) -> String {
-	let domain = String::from(&user.url);
-	let mut website: Website = Website::new(&domain);
-	let mut pages: Vec<String> = Vec::new();
-
-	website.configuration.respect_robots_txt = true;
-	website.configuration.verbose = true;
-	website.crawl();
-
-	for page in website.get_pages() {
-		pages.push(page.get_url().to_string());
-	}
-
-	let web_site = Page {
-		pages,
-		user_id: user.id,
-		domain,
-	};
-
-	let serialized = serde_json::to_string(&web_site).unwrap();
-	let serialized_copy = serialized.clone();
-
+	
 	let handle = thread::spawn(move || {
+		let domain = String::from(&user.url);
+		let mut website: Website = Website::new(&domain);
+		let mut pages: Vec<String> = Vec::new();
+	
+		website.configuration.respect_robots_txt = true;
+		website.configuration.verbose = true;
+		website.crawl();
+	
+		for page in website.get_pages() {
+			pages.push(page.get_url().to_string());
+		}
+	
+		let web_site = Page {
+			pages,
+			user_id: user.id,
+			domain,
+		};
+	
+		let serialized = serde_json::to_string(&web_site).unwrap();
+		let serialized_copy = serialized.clone();
+
 		monitor_page(serialized);
 		thread::sleep(Duration::from_millis(1));
 	});
 
 	drop(handle);
 
-	serialized_copy
+	format!("Crawling page")
 }
