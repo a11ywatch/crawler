@@ -10,17 +10,37 @@ use std::env;
 
 #[tokio::main]
 pub async fn monitor_page(serialized: String) {
-	let page_url = match env::var("CRAWL_URL") {
+	let endpoint = match env::var("CRAWL_URL") {
 		Ok(val) => val.to_string(),
 		Err(_) => "".to_string(),
 	};
 
-	if page_url.chars().count() > 1 {
+	if endpoint.chars().count() > 1 {
 		let mut map = HashMap::new();
 		map.insert("data", serialized);
 
 		reqwest::Client::new()
-			.post(&page_url)
+			.post(&endpoint)
+			.form(&map)
+			.send()
+			.await
+			.unwrap();
+	}
+}
+
+#[tokio::main]
+pub async fn monitor_page_complete(serialized: String) {
+	let endpoint = match env::var("CRAWL_URL_COMPLETE") {
+		Ok(val) => val.to_string(),
+		Err(_) => "".to_string(),
+	};
+
+	if endpoint.chars().count() > 1 {
+		let mut map = HashMap::new();
+		map.insert("data", serialized);
+
+		reqwest::Client::new()
+			.post(&endpoint)
 			.form(&map)
 			.send()
 			.await

@@ -2,10 +2,13 @@ FROM rustlang/rust:nightly
 
 ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=8000
-ENV ROCKET_ENV="dev"
+ENV ROCKET_ENV="prod"
 
 ARG CRAWL_URL
-ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl}"
+ARG CRAWL_URL_COMPLETE
+
+ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl-background}"
+ENV CRAWL_URL_COMPLETE="${CRAWL_URL_COMPLETE:-http://api:8080/api/website-crawl-background-complete}"
 
 RUN apt-get update -y && apt-get install -y openssl libssl-dev
 

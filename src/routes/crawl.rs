@@ -16,7 +16,7 @@ use spider::website::Website;
 
 use super::super::interface::page::Page;
 use super::super::interface::website::WebPage;
-use super::monitor::monitor_page;
+use super::super::hooks::monitor::monitor_page;
 use std::thread;
 use std::time::Duration;
 

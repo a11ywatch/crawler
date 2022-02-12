@@ -22,6 +22,7 @@ extern crate sysinfo;
 
 mod interface;
 mod routes;
+mod hooks;
 
 use rocket_contrib::json::JsonValue;
 

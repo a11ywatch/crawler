@@ -47,8 +47,12 @@ curl --location --request POST 'http://0.0.0.0:8000/crawl' \
 
 ### ENV
 
+`CRAWL_URL` is the general endpoint to send the data to after completing either a full crawl or scan.
+`CRAWL_URL_COMPLETE` is used on the `/scan` endpoint to tell your api the job is finished and remove the tracking above
+
 ```
-CRAWL_URL="http://api:8080/api/website-crawl-background"
+CRAWL_URL=http://api:8080/api/website-crawl-background
+CRAWL_URL_COMPLETE=http://api:8080/api/website-crawl-background-complete
 ```
 
 ## LICENSE

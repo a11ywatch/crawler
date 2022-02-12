@@ -11,13 +11,21 @@ use website_crawler;
 fn main() {
     dotenv().ok();
     let key = "CRAWL_URL";
-    let page_url = match env::var(key) {
+    let key_complete = "CRAWL_URL_COMPLETE";
+
+    let crawl_url = match env::var(key) {
+        Ok(val) => val.to_string(),
+        Err(_) => "".to_string(),
+    };
+    let crawl_url_complete = match env::var(key_complete) {
         Ok(val) => val.to_string(),
         Err(_) => "".to_string(),
     };
 
-    println!("{}", page_url);
-    env::set_var(key, page_url);
+    println!("crawl message url {}", crawl_url);
+    println!("crawl complete message url {}", crawl_url_complete);
+
+    env::set_var(key, crawl_url);
 
     website_crawler::rocket().launch();
 }
