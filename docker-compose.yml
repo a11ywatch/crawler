@@ -8,3 +8,4 @@ services:
       - "8000:8000"
     environment: 
       - CRAWL_URL=${CRAWL_URL:-http://api:8080/api/website-crawl-background}
+      - CRAWL_URL_COMPLETE=${CRAWL_URL_COMPLETE:-http://api:8080/api/website-crawl-background-complete}

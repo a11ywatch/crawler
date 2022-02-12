@@ -14,9 +14,11 @@
  use rocket_contrib::json::Json;
  use spider::website::Website;
  
+ use super::super::interface::page::PageSingle;
  use super::super::interface::page::Page;
  use super::super::interface::website::WebPage;
- use super::monitor::monitor_page;
+ use super::super::hooks::monitor::monitor_page;
+ use super::super::hooks::monitor::monitor_page_complete;
  use std::thread;
  use std::time::Duration;
  
@@ -26,25 +28,32 @@
      let handle = thread::spawn(move || {
          let domain = String::from(&user.url);
          let mut website: Website = Website::new(&domain);
-         let mut pages: Vec<String> = Vec::new();
      
          website.configuration.respect_robots_txt = true;
          website.configuration.verbose = true;
          website.configuration.concurrency = num_cpus::get() | 4;
+
          website.on_link_find_callback = |page| {
-            let web_site = Page {
-                pages: [page.to_string()].to_vec(),
-                // TODO: may not need to self assign if temp queue in api is used to track domains:uid
-                user_id: 0,
-                domain: "".to_string(),
+            let website_page = PageSingle {
+                pages: [page.to_string()].to_vec()
             };
-            let serialized = serde_json::to_string(&web_site).unwrap();
+            let serialized = serde_json::to_string(&website_page).unwrap();
             monitor_page(serialized);
-            thread::sleep(Duration::from_micros(50));
+            thread::sleep(Duration::from_millis(1));
             page
          };
 
          website.crawl();
+
+         let web_site = Page {
+            pages: [].to_vec(),
+            domain,
+            user_id: user.id
+        };
+
+        let serialized = serde_json::to_string(&web_site).unwrap();
+        monitor_page_complete(serialized);
+        thread::sleep(Duration::from_millis(1));
      });
  
      drop(handle);
