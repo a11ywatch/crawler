@@ -9,6 +9,7 @@ use rocket_contrib;
 
 use serde_json;
 use spider;
+use num_cpus;
 
 use rocket_contrib::json::Json;
 use spider::website::Website;
@@ -29,6 +30,7 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 	
 		website.configuration.respect_robots_txt = true;
 		website.configuration.verbose = true;
+		website.configuration.concurrency = num_cpus::get() | 4;
 		website.crawl();
 	
 		for page in website.get_pages() {

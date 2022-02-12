@@ -43,7 +43,7 @@ pub fn rocket() -> rocket::Rocket {
 				routes::status::get_cpu,
 				routes::status::get_server_load,
 				routes::crawl::crawl_page,
-				// routes::scan::scan_page,
+				routes::scan::scan_page,
 			],
 		)
 		.register(catchers![not_found])
