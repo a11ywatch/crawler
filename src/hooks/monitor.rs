@@ -28,9 +28,51 @@ pub async fn monitor_page(serialized: String) {
 	}
 }
 
+
+#[tokio::main]
+pub async fn monitor_page_background(serialized: String) {
+	let endpoint = match env::var("CRAWL_URL_BACKGROUND") {
+		Ok(val) => val.to_string(),
+		Err(_) => "".to_string(),
+	};
+
+	if endpoint.chars().count() > 1 {
+		let mut map = HashMap::new();
+		map.insert("data", serialized);
+
+		reqwest::Client::new()
+			.post(&endpoint)
+			.form(&map)
+			.send()
+			.await
+			.unwrap();
+	}
+}
+
+
+#[tokio::main]
+pub async fn monitor_page_start(serialized: String) {
+	let endpoint = match env::var("SCAN_URL_START") {
+		Ok(val) => val.to_string(),
+		Err(_) => "".to_string(),
+	};
+
+	if endpoint.chars().count() > 1 {
+		let mut map = HashMap::new();
+		map.insert("data", serialized);
+
+		reqwest::Client::new()
+			.post(&endpoint)
+			.form(&map)
+			.send()
+			.await
+			.unwrap();
+	}
+}
+
 #[tokio::main]
 pub async fn monitor_page_complete(serialized: String) {
-	let endpoint = match env::var("CRAWL_URL_COMPLETE") {
+	let endpoint = match env::var("SCAN_URL_COMPLETE") {
 		Ok(val) => val.to_string(),
 		Err(_) => "".to_string(),
 	};

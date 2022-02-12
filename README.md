@@ -12,7 +12,7 @@ Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.htm
 
 or
 
-1. `docker-compose up`
+1. `docker compose up`
 
 ### image
 
@@ -48,11 +48,14 @@ curl --location --request POST 'http://0.0.0.0:8000/crawl' \
 ### ENV
 
 `CRAWL_URL` is the general endpoint to send the data to after completing either a full crawl or scan.
-`CRAWL_URL_COMPLETE` is used on the `/scan` endpoint to tell your api the job is finished and remove the tracking above
+`SCAN_URL_COMPLETE` is used on the `/scan` endpoint to tell your api the job is finished and remove the tracking above
+`SCAN_URL_START` is used on the `/scan` endpoint to tell your api the job is started and to init tracking above
 
 ```
-CRAWL_URL=http://api:8080/api/website-crawl-background
-CRAWL_URL_COMPLETE=http://api:8080/api/website-crawl-background-complete
+CRAWL_URL=http://api:8080/api/website-crawl
+CRAWL_URL_BACKGROUND=http://api:8080/api/website-crawl-background
+SCAN_URL_COMPLETE=http://api:8080/api/website-crawl-background-complete
+SCAN_URL_START=http://api:8080/api/website-crawl-background-start
 ```
 
 ## LICENSE
