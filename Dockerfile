@@ -11,7 +11,7 @@ ARG SCAN_URL_COMPLETE
 ARG SCAN_URL_START
 
 ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl}"
-ENV CRAWL_URL_BACKGROUND="${CRAWL_URL:-http://api:8080/api/website-crawl-background}"
+ENV CRAWL_URL_BACKGROUND="${CRAWL_URL_BACKGROUND:-http://api:8080/api/website-crawl-background}"
 ENV SCAN_URL_COMPLETE="${SCAN_URL_COMPLETE:-http://api:8080/api/website-crawl-background-complete}"
 ENV SCAN_URL_START="${SCAN_URL_START:-http://api:8080/api/website-crawl-background-start}"
 

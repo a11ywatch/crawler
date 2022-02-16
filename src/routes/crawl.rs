@@ -36,7 +36,8 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 		
 		website.configuration.respect_robots_txt = true;
 		website.configuration.verbose = configuration_verbose;
-		website.configuration.concurrency = num_cpus::get() | 4;
+		website.configuration.delay = 1;
+		website.configuration.concurrency = num_cpus::get();
 		website.crawl();
 	
 		for page in website.get_pages() {
