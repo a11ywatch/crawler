@@ -6,11 +6,11 @@
 
 use reqwest;
 use std::collections::HashMap;
-use std::env;
+use std::env::var;
 
 #[tokio::main]
 pub async fn monitor_page(serialized: String) {
-	let endpoint = match env::var("CRAWL_URL") {
+	let endpoint = match var("CRAWL_URL") {
 		Ok(val) => val.to_string(),
 		Err(_) => "".to_string(),
 	};
@@ -31,7 +31,7 @@ pub async fn monitor_page(serialized: String) {
 
 #[tokio::main]
 pub async fn monitor_page_background(serialized: String) {
-	let endpoint = match env::var("CRAWL_URL_BACKGROUND") {
+	let endpoint = match var("CRAWL_URL_BACKGROUND") {
 		Ok(val) => val.to_string(),
 		Err(_) => "".to_string(),
 	};
@@ -52,7 +52,7 @@ pub async fn monitor_page_background(serialized: String) {
 
 #[tokio::main]
 pub async fn monitor_page_start(serialized: String) {
-	let endpoint = match env::var("SCAN_URL_START") {
+	let endpoint = match var("SCAN_URL_START") {
 		Ok(val) => val.to_string(),
 		Err(_) => "".to_string(),
 	};
@@ -72,7 +72,7 @@ pub async fn monitor_page_start(serialized: String) {
 
 #[tokio::main]
 pub async fn monitor_page_complete(serialized: String) {
-	let endpoint = match env::var("SCAN_URL_COMPLETE") {
+	let endpoint = match var("SCAN_URL_COMPLETE") {
 		Ok(val) => val.to_string(),
 		Err(_) => "".to_string(),
 	};

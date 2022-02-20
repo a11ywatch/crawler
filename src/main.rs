@@ -17,8 +17,6 @@ fn main() {
         Err(_) => "".to_string(),
     };
 
-    println!("crawl message url {}", crawl_url);
-
     env::set_var(key, crawl_url);
 
     website_crawler::rocket().launch();
