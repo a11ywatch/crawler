@@ -10,82 +10,60 @@ use std::env::var;
 
 #[tokio::main]
 pub async fn monitor_page(serialized: String) {
-	let endpoint = match var("CRAWL_URL") {
-		Ok(val) => val.to_string(),
-		Err(_) => "".to_string(),
-	};
+	let endpoint = var("CRAWL_URL").unwrap();
 
-	if endpoint.chars().count() > 1 {
-		let mut map = HashMap::new();
-		map.insert("data", serialized);
+	let mut map = HashMap::new();
+	map.insert("data", serialized);
 
-		reqwest::Client::new()
-			.post(&endpoint)
-			.form(&map)
-			.send()
-			.await
-			.unwrap();
-	}
+	reqwest::Client::new()
+		.post(&endpoint)
+		.form(&map)
+		.send()
+		.await
+		.unwrap();
 }
-
 
 #[tokio::main]
 pub async fn monitor_page_background(serialized: String) {
-	let endpoint = match var("CRAWL_URL_BACKGROUND") {
-		Ok(val) => val.to_string(),
-		Err(_) => "".to_string(),
-	};
+	let endpoint = var("CRAWL_URL_BACKGROUND").unwrap();
 
-	if endpoint.chars().count() > 1 {
-		let mut map = HashMap::new();
-		map.insert("data", serialized);
+	let mut map = HashMap::new();
+	map.insert("data", serialized);
 
-		reqwest::Client::new()
-			.post(&endpoint)
-			.form(&map)
-			.send()
-			.await
-			.unwrap();
-	}
+	reqwest::Client::new()
+		.post(&endpoint)
+		.form(&map)
+		.send()
+		.await
+		.unwrap();
 }
-
 
 #[tokio::main]
 pub async fn monitor_page_start(serialized: String) {
-	let endpoint = match var("SCAN_URL_START") {
-		Ok(val) => val.to_string(),
-		Err(_) => "".to_string(),
-	};
+	let endpoint = var("SCAN_URL_START").unwrap();
 
-	if endpoint.chars().count() > 1 {
-		let mut map = HashMap::new();
-		map.insert("data", serialized);
+	let mut map = HashMap::new();
+	map.insert("data", serialized);
 
-		reqwest::Client::new()
-			.post(&endpoint)
-			.form(&map)
-			.send()
-			.await
-			.unwrap();
-	}
+	reqwest::Client::new()
+		.post(&endpoint)
+		.form(&map)
+		.send()
+		.await
+		.unwrap();
 }
 
 #[tokio::main]
 pub async fn monitor_page_complete(serialized: String) {
-	let endpoint = match var("SCAN_URL_COMPLETE") {
-		Ok(val) => val.to_string(),
-		Err(_) => "".to_string(),
-	};
+	let endpoint = var("SCAN_URL_COMPLETE").unwrap();
 
-	if endpoint.chars().count() > 1 {
-		let mut map = HashMap::new();
-		map.insert("data", serialized);
+	let mut map = HashMap::new();
+	map.insert("data", serialized);
 
-		reqwest::Client::new()
-			.post(&endpoint)
-			.form(&map)
-			.send()
-			.await
-			.unwrap();
-	}
+	reqwest::Client::new()
+		.post(&endpoint)
+		.form(&map)
+		.send()
+		.await
+		.unwrap();
 }

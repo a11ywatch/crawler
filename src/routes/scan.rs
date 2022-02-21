@@ -21,7 +21,7 @@
  use super::super::hooks::monitor::monitor_page_start;
  use super::super::hooks::monitor::monitor_page_complete;
  use std::thread;
- use std::env;
+ use std::env::var;
  use std::time::Duration;
  
  #[post("/scan", format = "json", data = "<user>")]
@@ -40,15 +40,10 @@
         monitor_page_start(serde_json::to_string(&web_site).unwrap());
         thread::sleep(Duration::from_millis(1));
 
-        let configuration_verbose = match env::var("RUST_LOG") {
-			Ok(_) => true,
-			Err(_) => false,
-		};
-
         website.configuration.respect_robots_txt = true;
         website.configuration.delay = 1;
-        website.configuration.verbose = configuration_verbose;
-		website.configuration.concurrency = num_cpus::get();
+        website.configuration.verbose = var("RUST_LOG").unwrap() == "true";
+        website.configuration.concurrency = (num_cpus::get() * 4) - 1;
 
         website.on_link_find_callback = |link| {
             let page = PageSingle {

@@ -509,29 +509,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
-name = "dotenv_codegen"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56966279c10e4f8ee8c22123a15ed74e7c8150b658b26c619c53f4a56eb4a8aa"
-dependencies = [
- "dotenv_codegen_implementation",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "dotenv_codegen_implementation"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53e737a3522cd45f6adc19b644ce43ef53e1e9045f2d2de425c1f468abd4cf33"
-dependencies = [
- "dotenv",
- "proc-macro-hack",
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
-]
-
-[[package]]
 name = "dtoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2655,10 +2632,11 @@ dependencies = [
 
 [[package]]
 name = "spider"
-version = "1.2.2"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c87885bc9c36954b3c08ff50444aaf98a2d5f98f11adf7ee4440289f412ff04a"
+checksum = "6883fc37e7998613e3752ffc9ccffc7e92761400f1d4b095dd94a6728b500055"
 dependencies = [
+ "num_cpus",
  "rayon",
  "reqwest 0.11.9",
  "robotparser",
@@ -3369,10 +3347,9 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "dotenv",
- "dotenv_codegen",
  "futures 0.3.21",
  "num_cpus",
  "once_cell",

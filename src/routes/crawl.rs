@@ -18,7 +18,7 @@ use super::super::interface::page::Page;
 use super::super::interface::website::WebPage;
 use super::super::hooks::monitor::monitor_page_background;
 use std::thread;
-use std::env;
+use std::env::var;
 use std::time::Duration;
 
 #[post("/crawl", format = "json", data = "<user>")]
@@ -29,15 +29,10 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 		let mut website: Website = Website::new(&domain);
 		let mut pages: Vec<String> = Vec::new();
 	
-		let configuration_verbose = match env::var("RUST_LOG") {
-			Ok(_) => true,
-			Err(_) => false,
-		};
-		
 		website.configuration.respect_robots_txt = true;
-		website.configuration.verbose = configuration_verbose;
+		website.configuration.verbose = var("RUST_LOG").unwrap() == "true";
 		website.configuration.delay = 1;
-		website.configuration.concurrency = num_cpus::get();
+		website.configuration.concurrency = (num_cpus::get() * 4) - 1;
 		website.crawl();
 	
 		for page in website.get_pages() {

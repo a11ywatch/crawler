@@ -20,9 +20,9 @@ extern crate serde_json;
 extern crate spider;
 extern crate sysinfo;
 
-mod interface;
-mod routes;
-mod hooks;
+pub mod interface;
+pub mod routes;
+pub mod hooks;
 
 use rocket_contrib::json::JsonValue;
 
