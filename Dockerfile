@@ -7,9 +7,10 @@ RUN cargo install --path .
 
 FROM debian:buster-slim
 
+# install curl for health_checks
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    ca-certificates wget gcc libssl-dev libc6-dev
+    ca-certificates wget gcc libssl-dev curl libc6-dev
 
 COPY --from=builder /usr/local/cargo/bin/website_crawler /usr/local/bin/website_crawler
 
