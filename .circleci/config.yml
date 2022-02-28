@@ -2,7 +2,7 @@ version: 2.1
 jobs:
   crawler:
     docker:
-      - image: a11ywatch/crawler
+      - image: cimg/rust:1.59.0
     steps:
       - checkout
       - restore_cache:

@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["jeffreymendez <jeffmendez19@gmail.com>"]
 edition = "2018"
 description = "crawl all urls on a website async & sync"
@@ -8,7 +8,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/A11yWatch/crawler"
 keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-generator"]
-categories = ["asynchronous", "accessibility", "parsing"]
+categories = ["asynchronous", "accessibility"]
 
 [dependencies]
 rocket = "0.4.10"
@@ -31,3 +31,7 @@ features = ["json"]
 
 [dev-dependencies]
 once_cell = "1.2.0"
+
+[profile.release]
+lto = true
+opt-level = "z"

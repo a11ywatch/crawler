@@ -1,2 +1,5 @@
 target
 .circleci
+tests
+Dockerfile.dev
+docker-compose.yml
