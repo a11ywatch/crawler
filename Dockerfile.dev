@@ -9,6 +9,10 @@ ARG CRAWL_URL_BACKGROUND
 ARG SCAN_URL_COMPLETE
 ARG SCAN_URL_START
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    ca-certificates wget gcc libssl-dev curl libc6-dev
+    
 ENV CRAWL_URL="${CRAWL_URL:-http://api:8080/api/website-crawl}"
 ENV CRAWL_URL_BACKGROUND="${CRAWL_URL_BACKGROUND:-http://api:8080/api/website-crawl-background}"
 ENV SCAN_URL_COMPLETE="${SCAN_URL_COMPLETE:-http://api:8080/api/website-crawl-background-complete}"
