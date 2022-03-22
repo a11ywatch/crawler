@@ -41,9 +41,9 @@
         thread::sleep(Duration::from_millis(1));
 
         website.configuration.respect_robots_txt = true;
-        website.configuration.delay = 1;
+        website.configuration.delay = 50;
         website.configuration.verbose = var("RUST_LOG").unwrap() == "true";
-        website.configuration.concurrency = (num_cpus::get() * 4) - 1;
+        website.configuration.concurrency = (num_cpus::get() * 4) - 2;
 
         website.on_link_find_callback = |link| {
             let page = PageSingle {

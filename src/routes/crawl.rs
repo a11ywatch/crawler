@@ -31,7 +31,7 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 	
 		website.configuration.respect_robots_txt = true;
 		website.configuration.verbose = var("RUST_LOG").unwrap() == "true";
-		website.configuration.delay = 1;
+		website.configuration.delay = 50;
 		website.configuration.concurrency = (num_cpus::get() * 4) - 1;
 		website.crawl();
 	
@@ -47,6 +47,7 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 	
 		let serialized = serde_json::to_string(&web_site).unwrap();
 
+		// TODO: RENAME BACKGROUND
 		monitor_page_background(serialized);
 		thread::sleep(Duration::from_millis(1));
 	});

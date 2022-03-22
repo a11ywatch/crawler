@@ -1,9 +1,3 @@
-/*
- * Copyright (c) A11yWatch, LLC. and its affiliates.
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- **/
-
 use dotenv::dotenv;
 use std::env;
 use website_crawler;
@@ -13,11 +7,11 @@ fn main() {
     dotenv().ok();
     let settings: Settings = Settings::new();
 
-    env::set_var("CRAWL_URL", settings.crawl_url);
-    env::set_var("CRAWL_URL_BACKGROUND", settings.crawl_url_background);
-    env::set_var("SCAN_URL_START", settings.scan_url_start);
-    env::set_var("SCAN_URL_COMPLETE", settings.scan_url_complete);
-    env::set_var("RUST_LOG", settings.configuration_verbose);
+    env::set_var("CRAWL_URL", &settings.crawl_url);
+    env::set_var("CRAWL_URL_BACKGROUND", &settings.crawl_url_background);
+    env::set_var("SCAN_URL_START", &settings.scan_url_start);
+    env::set_var("SCAN_URL_COMPLETE", &settings.scan_url_complete);
+    env::set_var("RUST_LOG", &settings.configuration_verbose);
 
     website_crawler::rocket().launch();
 }
