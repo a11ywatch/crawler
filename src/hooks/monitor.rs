@@ -9,6 +9,7 @@ pub async fn monitor_page(serialized: String) -> Result<(), reqwest::Error> {
 
 	reqwest::Client::new()
 		.post(&var("CRAWL_URL").unwrap())
+		.header("Authentication", &var("INTERNAL_PWD").unwrap())
 		.form(&map)
 		.send()
 		.await?;
@@ -23,6 +24,7 @@ pub async fn monitor_page_background(serialized: String) -> Result<(), reqwest::
 
 	reqwest::Client::new()
 		.post(&var("CRAWL_URL_BACKGROUND").unwrap())
+		.header("Authentication", &var("INTERNAL_PWD").unwrap())
 		.form(&map)
 		.send()
 		.await?;
@@ -32,13 +34,12 @@ pub async fn monitor_page_background(serialized: String) -> Result<(), reqwest::
 
 #[tokio::main]
 pub async fn monitor_page_start(serialized: &String) -> Result<(), reqwest::Error> {
-	let endpoint = var("SCAN_URL_START").unwrap();
-
 	let mut map = HashMap::new();
 	map.insert("data", serialized);
 
 	reqwest::Client::new()
-		.post(&endpoint)
+		.post(&var("SCAN_URL_START").unwrap())
+		.header("Authentication", &var("INTERNAL_PWD").unwrap())
 		.form(&map)
 		.send()
 		.await?;
@@ -53,6 +54,7 @@ pub async fn monitor_page_complete(serialized: &String) -> Result<(), reqwest::E
 
 	reqwest::Client::new()
 		.post(&var("SCAN_URL_COMPLETE").unwrap())
+		.header("Authentication", &var("INTERNAL_PWD").unwrap())
 		.form(&map)
 		.send()
 		.await?;
