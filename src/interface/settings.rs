@@ -13,19 +13,15 @@ pub struct Settings {
 impl Settings {
     pub fn new(establish: bool) -> Settings {
         let crawl_url = var("CRAWL_URL").unwrap_or_else(|_| 
-            "http:///127.0.0.1:8080/api/website-crawl".into());
+            "http:///127.0.0.1:8099/api/website-crawl".into());
         let crawl_url_background = var("CRAWL_URL_BACKGROUND").unwrap_or_else(|_| 
-            "http:///127.0.0.1:8080/api/website-crawl-background".into());
+            "http:///127.0.0.1:8099/api/website-crawl-background".into());
 
         let scan_url_start = var("SCAN_URL_START").unwrap_or_else(|_| 
-            "http:///127.0.0.1:8080/127.0.0.1/api/website-crawl-background-start".into());
+            "http:///127.0.0.1:8099/api/website-crawl-background-start".into());
         let scan_url_complete = var("SCAN_URL_COMPLETE").unwrap_or_else(|_| 
-            "http:///127.0.0.1:8080/api/website-crawl-background-complete".into());
+            "http:///127.0.0.1:8099/api/website-crawl-background-complete".into());
             
-        // internal service password TODO: move to private micro service
-        let internal_pwd = var("INTERNAL_PWD").unwrap_or_else(|_| 
-            "INTERNAL_PWD".into());
-                
         let configuration_verbose = match var("RUST_LOG") {
             Ok(_) => "true".to_string(),
             Err(_) => "false".to_string(),
@@ -36,7 +32,6 @@ impl Settings {
             env::set_var("CRAWL_URL_BACKGROUND", &crawl_url_background);
             env::set_var("SCAN_URL_START", &scan_url_start);
             env::set_var("SCAN_URL_COMPLETE", &scan_url_complete);
-            env::set_var("INTERNAL_PWD", &internal_pwd);
             env::set_var("RUST_LOG", &configuration_verbose);
         }
 
