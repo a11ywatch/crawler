@@ -42,7 +42,8 @@ pub fn crawl_page(user: Json<WebPage>) -> String {
 		let serialized = serde_json::to_string(&web_site).unwrap();
 
 		// TODO: RENAME BACKGROUND
-		monitor_page_background(serialized);
+		monitor_page_background(serialized).unwrap_or_else(|e| println!("{:?}", e));
+
 		thread::sleep(Duration::from_millis(1));
 	});
 

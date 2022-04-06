@@ -24,14 +24,14 @@
      let handle = thread::spawn(move || {
         let domain = String::from(&user.url);
         let mut website: Website = Website::new(&domain);
-     
         let web_site = Page {
             pages: [].to_vec(),
             domain,
             user_id: user.id
         };
-        
-        monitor_page_start(serde_json::to_string(&web_site).unwrap());
+        let web_json = &serde_json::to_string(&web_site).unwrap();
+
+        monitor_page_start(web_json).unwrap_or_else(|e| println!("{:?}", e));;
 
         website.configuration.respect_robots_txt = true;
         website.configuration.delay = 25;
@@ -42,7 +42,7 @@
             let page = PageSingle {
                 pages: [link.to_string()].to_vec()
             };
-            monitor_page(serde_json::to_string(&page).unwrap());
+            monitor_page(serde_json::to_string(&page).unwrap()).unwrap_or_else(|e| println!("{:?}", e));;
             link
         };
 
@@ -51,7 +51,7 @@
         // TODO: REMOVE DURATIN FOR QUEUE
         thread::sleep(Duration::from_millis(250));
 
-        monitor_page_complete(serde_json::to_string(&web_site).unwrap());
+        monitor_page_complete(web_json).unwrap_or_else(|e| println!("{:?}", e));;
      });
  
      drop(handle);

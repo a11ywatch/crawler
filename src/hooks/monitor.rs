@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::env::var;
 
 #[tokio::main]
-pub async fn monitor_page(serialized: String) {
+pub async fn monitor_page(serialized: String) -> Result<(), reqwest::Error> {
 	let mut map = HashMap::new();
 	map.insert("data", serialized);
 
@@ -11,27 +11,27 @@ pub async fn monitor_page(serialized: String) {
 		.post(&var("CRAWL_URL").unwrap())
 		.form(&map)
 		.send()
-		.await
-		.unwrap();
+		.await?;
+
+	Ok(())
 }
 
 #[tokio::main]
-pub async fn monitor_page_background(serialized: String) {
-	let endpoint = var("CRAWL_URL_BACKGROUND").unwrap();
-
+pub async fn monitor_page_background(serialized: String) -> Result<(), reqwest::Error> {
 	let mut map = HashMap::new();
 	map.insert("data", serialized);
 
 	reqwest::Client::new()
-		.post(&endpoint)
+		.post(&var("CRAWL_URL_BACKGROUND").unwrap())
 		.form(&map)
 		.send()
-		.await
-		.unwrap();
+		.await?;
+
+	Ok(())
 }
 
 #[tokio::main]
-pub async fn monitor_page_start(serialized: String) {
+pub async fn monitor_page_start(serialized: &String) -> Result<(), reqwest::Error> {
 	let endpoint = var("SCAN_URL_START").unwrap();
 
 	let mut map = HashMap::new();
@@ -41,21 +41,21 @@ pub async fn monitor_page_start(serialized: String) {
 		.post(&endpoint)
 		.form(&map)
 		.send()
-		.await
-		.unwrap();
+		.await?;
+
+	Ok(())
 }
 
 #[tokio::main]
-pub async fn monitor_page_complete(serialized: String) {
-	let endpoint = var("SCAN_URL_COMPLETE").unwrap();
-
+pub async fn monitor_page_complete(serialized: &String) -> Result<(), reqwest::Error> {
 	let mut map = HashMap::new();
 	map.insert("data", serialized);
 
 	reqwest::Client::new()
-		.post(&endpoint)
+		.post(&var("SCAN_URL_COMPLETE").unwrap())
 		.form(&map)
 		.send()
-		.await
-		.unwrap();
+		.await?;
+
+	Ok(())
 }
