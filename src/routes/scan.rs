@@ -1,9 +1,3 @@
-/*
- * Copyright (c) A11yWatch, LLC. and its affiliates.
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- **/
-
  use rocket;
  use rocket_contrib;
  
@@ -38,12 +32,11 @@
         };
         
         monitor_page_start(serde_json::to_string(&web_site).unwrap());
-        thread::sleep(Duration::from_millis(1));
 
         website.configuration.respect_robots_txt = true;
-        website.configuration.delay = 50;
+        website.configuration.delay = 25;
         website.configuration.verbose = var("RUST_LOG").unwrap() == "true";
-        website.configuration.concurrency = (num_cpus::get() * 4) - 2;
+        website.configuration.concurrency = num_cpus::get();
 
         website.on_link_find_callback = |link| {
             let page = PageSingle {
@@ -54,7 +47,10 @@
         };
 
         website.crawl();
-        thread::sleep(Duration::from_millis(100));
+
+        // TODO: REMOVE DURATIN FOR QUEUE
+        thread::sleep(Duration::from_millis(250));
+
         monitor_page_complete(serde_json::to_string(&web_site).unwrap());
      });
  

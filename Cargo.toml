@@ -13,16 +13,12 @@ categories = ["asynchronous", "accessibility"]
 [dependencies]
 rocket = "0.4.10"
 spider = "1.4.0"
-reqwest = { version = "0.10.6" }
+reqwest = { version = "0.11" }
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
-dotenv = "0.15.0"
-tokio = { version = "0.2", features = ["full"] }
-futures = "0.3"
-url = "2.1.1"
+tokio = { version = "1.17.0", features = ["rt-multi-thread", "net", "macros"] }
 num_cpus = "1.13.0"
-sysinfo = "0.3.19"
 
 [dependencies.rocket_contrib]
 version = "0.4.10"
