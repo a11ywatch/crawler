@@ -31,9 +31,7 @@ pub fn rocket() -> rocket::Rocket {
 		.mount(
 			"/",
 			routes![
-				routes::index::landing,
 				routes::status::get_health,
-				routes::status::get_cpu,
 				routes::crawl::crawl_page,
 				routes::scan::scan_page,
 			],
