@@ -8,21 +8,20 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/A11yWatch/crawler"
 keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-generator"]
-categories = ["asynchronous", "accessibility"]
+categories = ["web", "accessibility", "crawler"]
 
 [dependencies]
 rocket = "0.4.10"
 spider = "1.4.0"
 reqwest = { version = "0.11" }
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_derive = "1.0"
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "net", "macros"] }
 num_cpus = "1.13.0"
 
 [profile.release]
-lto = true
 codegen-units = 1
+lto = true
 
 [dependencies.rocket_contrib]
 version = "0.4.10"

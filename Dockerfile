@@ -1,9 +1,9 @@
-FROM rustlang/rust:nightly AS builder
+FROM --platform=$BUILDPLATFORM rustlang/rust:nightly AS builder
 
 WORKDIR /app
 COPY . .
 
-RUN cargo install --path .
+RUN cargo install --no-default-features --path .
 
 FROM debian:buster-slim
 
