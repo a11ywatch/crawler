@@ -2,7 +2,10 @@ version: 2.1
 jobs:
   crawler:
     docker:
-      - image: cimg/rust:1.59.0
+      - image: rustlang/rust:nightly
+    resource_class: large
+    environment:
+      RUSTFLAGS: "-D warnings"
     steps:
       - checkout
       - restore_cache:
@@ -11,7 +14,10 @@ jobs:
             - node-v1-{{ .Branch }}-
             - node-v1-
       - run:
-          command: cargo test
+          command: apt-get update && apt-get install -y --no-install-recommends  gcc cmake libc6 libssl-dev
+      - run:
+          command: cargo install --no-default-features --path . && cargo test
+          no_output_timeout: 30m
       - save_cache:
           paths:
             - ~/usr/local/lib/target

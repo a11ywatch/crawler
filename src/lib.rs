@@ -11,20 +11,16 @@ extern crate num_cpus;
 extern crate reqwest;
 extern crate serde_json;
 extern crate spider;
+extern crate tonic;
 
 pub mod interface;
 pub mod routes;
 pub mod hooks;
+pub mod scanner;
+pub mod rpc;
+pub mod client;
 
-use rocket_contrib::json::JsonValue;
-
-#[catch(404)]
-fn not_found() -> JsonValue {
-	json!({
-		"status": "error",
-		"reason": "Resource was not found."
-	})
-}
+pub use rpc::server::{ grpc_start };
 
 pub fn rocket() -> rocket::Rocket {
 	rocket::ignite()
@@ -32,9 +28,6 @@ pub fn rocket() -> rocket::Rocket {
 			"/",
 			routes![
 				routes::status::get_health,
-				routes::crawl::crawl_page,
-				routes::scan::scan_page,
 			],
 		)
-		.register(catchers![not_found])
 }

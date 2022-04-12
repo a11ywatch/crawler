@@ -2,7 +2,7 @@
 name = "website_crawler"
 version = "0.2.1"
 authors = ["jeffreymendez <jeffmendez19@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "crawl all urls on a website async & sync"
 license = "MIT"
 readme = "README.md"
@@ -17,7 +17,16 @@ reqwest = { version = "0.11" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "net", "macros"] }
+tonic = "0.7"
+prost = "0.10"
 num_cpus = "1.13.0"
+
+[[bin]] # Bin to run the HelloWorld gRPC client
+name = "helloworld-client"
+path = "src/client.rs"
+
+[build-dependencies]
+tonic-build = "0.7"
 
 [profile.release]
 codegen-units = 1

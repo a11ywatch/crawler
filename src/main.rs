@@ -1,9 +1,17 @@
 use website_crawler::interface::settings::Settings;
-use website_crawler::rocket;
+use website_crawler::{ rocket, grpc_start };
+use tokio;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let settings: Settings = Settings::new(true);
     drop(settings);
 
-    rocket().launch();
+    tokio::spawn(async move {
+        rocket().launch();
+    });
+    
+    grpc_start().await?;
+
+    Ok(())
 }
