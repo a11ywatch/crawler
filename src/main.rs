@@ -4,8 +4,7 @@ use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let settings: Settings = Settings::new(true);
-    drop(settings);
+    Settings::new(true);
 
     tokio::spawn(async move {
         rocket().launch();

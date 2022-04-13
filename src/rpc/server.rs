@@ -34,7 +34,7 @@ impl Greeter for MyGreeter {
         request: Request<ScanRequest>,
     ) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
-        let url = req.url;
+        let url = req.url.clone();
 
         let reply = crawler::ScanReply {
             message: format!("scanning {:?}!", &url).into(),
@@ -54,7 +54,7 @@ impl Greeter for MyGreeter {
         request: Request<ScanRequest>,
     ) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
-        let url = req.url;
+        let url = req.url.clone();
 
         let reply = crawler::ScanReply {
             message: format!("scanning {:?}!", &url).into(),
@@ -80,8 +80,6 @@ pub async fn grpc_start() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(GreeterServer::new(greeter))
         .serve(addr)
         .await?;
-
-        println!("starting");
 
     Ok(())
 }

@@ -4,6 +4,7 @@ WORKDIR /app
 COPY . .
 
 ENV GRPC_HOST=0.0.0.0:50055
+ENV GRPC_HOST_API=api:50051
 
 # install curl for health_checks
 RUN apt-get update \
@@ -20,7 +21,6 @@ RUN apt-get update \
     ca-certificates curl libssl-dev
 
 COPY --from=builder /usr/local/cargo/bin/website_crawler /usr/local/bin/website_crawler
-COPY --from=builder /usr/local/cargo/bin/helloworld-client /usr/local/bin/helloworld-client
 
 ARG CRAWL_URL
 ARG CRAWL_URL_BACKGROUND
@@ -36,5 +36,6 @@ ENV CRAWL_URL_BACKGROUND="${CRAWL_URL_BACKGROUND:-http://api:8080/api/website-cr
 ENV SCAN_URL_COMPLETE="${SCAN_URL_COMPLETE:-http://api:8080/api/website-crawl-background-complete}"
 ENV SCAN_URL_START="${SCAN_URL_START:-http://api:8080/api/website-crawl-background-start}"
 ENV GRPC_HOST=0.0.0.0:50055
+ENV GRPC_HOST_API=api:50051
 
 CMD ["website_crawler"]

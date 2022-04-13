@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package website;
+
+service WebsiteService {
+   rpc Scan (ScanParams) returns (Empty) {}
+}
+
+message ScanParams {
+   repeated string pages = 1;
+}
+
+message Empty {}

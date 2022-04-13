@@ -18,7 +18,6 @@ pub mod routes;
 pub mod hooks;
 pub mod scanner;
 pub mod rpc;
-pub mod client;
 
 pub use rpc::server::{ grpc_start };
 

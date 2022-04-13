@@ -21,10 +21,6 @@ tonic = "0.7"
 prost = "0.10"
 num_cpus = "1.13.0"
 
-[[bin]] # Bin to run the HelloWorld gRPC client
-name = "helloworld-client"
-path = "src/client.rs"
-
 [build-dependencies]
 tonic-build = "0.7"
 
