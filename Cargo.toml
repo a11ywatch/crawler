@@ -11,15 +11,15 @@ keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-gene
 categories = ["web", "accessibility", "crawler"]
 
 [dependencies]
-rocket = "0.4.10"
 spider = "1.5.1"
-reqwest = { version = "0.11" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "net", "macros"] }
 tonic = "0.7"
 prost = "0.10"
 num_cpus = "1.13.0"
+
+[[bin]]
+name = "health_client"
+path = "src/hc_client.rs"
 
 [build-dependencies]
 tonic-build = "0.7"
@@ -27,11 +27,6 @@ tonic-build = "0.7"
 [profile.release]
 codegen-units = 1
 lto = true
-
-[dependencies.rocket_contrib]
-version = "0.4.10"
-default-features = false
-features = ["json"]
 
 [dev-dependencies]
 once_cell = "1.2.0"

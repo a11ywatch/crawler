@@ -3,7 +3,6 @@ syntax = "proto3";
 package crawler;
 
 service Greeter {
-    rpc SayHello (HelloRequest) returns (HelloReply) {}
     rpc Scan (ScanRequest) returns (ScanReply) {}
     rpc Crawl (ScanRequest) returns (ScanReply) {}
 }

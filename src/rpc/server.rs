@@ -1,33 +1,19 @@
-use std::net::SocketAddr;
-use tonic::{transport::Server, Request, Response, Status};
-
 pub mod crawler {
     tonic::include_proto!("crawler");
 }
 
-use crawler::greeter_server::{Greeter, GreeterServer};
-use crawler::{HelloReply, HelloRequest, ScanReply, ScanRequest};
+pub use crawler::greeter_server::{Greeter, GreeterServer};
+pub use crawler::{ScanReply, ScanRequest};
+use tonic::{Request, Response, Status};
 
 use crate::scanner::scan::scan as scanPage;
 
 #[derive(Debug, Default)]
-pub struct MyGreeter {}
+pub struct MyGreeter;
 
 #[tonic::async_trait]
 impl Greeter for MyGreeter {
-    async fn say_hello(
-        &self,
-        request: Request<HelloRequest>,
-    ) -> Result<Response<HelloReply>, Status> {
-        println!("Got a request: {:?}", request);
-
-        let reply = crawler::HelloReply {
-            message: format!("Hello {:?}!", request.into_inner().name).into(),
-        };
-
-        Ok(Response::new(reply))
-    }
-
+    // TODO: MOVE TO STREAM INSTEAD OF SENDING RPC FROM CLIENT BACK
     async fn scan(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
         let url = req.url.clone();
@@ -37,14 +23,11 @@ impl Greeter for MyGreeter {
         };
 
         tokio::spawn(async move {
-            scanPage(url, req.id)
-                .await
-                .unwrap_or_else(|e| println!("{:?}", e));
+            scanPage(url, req.id).await.expect("scan failed to start");
         });
 
         Ok(Response::new(reply))
     }
-
     // used to gather all links first before sending to api [TODO]
     async fn crawl(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
@@ -55,26 +38,9 @@ impl Greeter for MyGreeter {
         };
 
         tokio::spawn(async move {
-            scanPage(url, req.id)
-                .await
-                .unwrap_or_else(|e| println!("{:?}", e));
+            scanPage(url, req.id).await.expect("crawl failed to start");
         });
 
         Ok(Response::new(reply))
     }
-}
-
-// start the grpc server
-pub async fn grpc_start() -> Result<(), Box<dyn std::error::Error>> {
-    let addr: SocketAddr = option_env!("GRPC_HOST").unwrap_or("[::1]:50055").parse()?;
-    let greeter = MyGreeter::default();
-
-    println!("grpc server listening on 0.0.0.0:50055");
-
-    Server::builder()
-        .add_service(GreeterServer::new(greeter))
-        .serve(addr)
-        .await?;
-
-    Ok(())
 }

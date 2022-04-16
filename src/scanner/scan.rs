@@ -23,13 +23,13 @@ pub async fn scan(domain: String, user_id: u32) -> Result<(), core::fmt::Error> 
 
     monitor_page_start(&mut client, &web_site)
         .await
-        .unwrap_or_else(|e| println!("{:?}", e));
+        .expect("crawl message start failed.");
 
     website.crawl();
 
     monitor_page_complete(&mut client, &web_site)
         .await
-        .unwrap_or_else(|e| println!("{:?}", e));
+        .expect("crawl message completed failed.");
 
     Ok(())
 }

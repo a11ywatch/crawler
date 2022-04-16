@@ -1,11 +1,10 @@
-use core::fmt::Error;
-use std::env::var;
-use tonic::transport::Channel;
-
 pub mod website {
     tonic::include_proto!("website");
 }
 
+use core::fmt::Error;
+use std::env::var;
+use tonic::transport::Channel;
 use website::{website_service_client::WebsiteServiceClient, ScanParams};
 
 // make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
