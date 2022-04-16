@@ -1,15 +1,14 @@
-use tonic::{transport::Server, Request, Response, Status};
 use std::net::SocketAddr;
-use std::thread;
+use tonic::{transport::Server, Request, Response, Status};
 
 pub mod crawler {
     tonic::include_proto!("crawler");
 }
 
 use crawler::greeter_server::{Greeter, GreeterServer};
-use crawler::{HelloReply, ScanReply, ScanRequest, HelloRequest};
+use crawler::{HelloReply, HelloRequest, ScanReply, ScanRequest};
 
-use crate::scanner::scan::{scan as scanPage};
+use crate::scanner::scan::scan as scanPage;
 
 #[derive(Debug, Default)]
 pub struct MyGreeter {}
@@ -29,10 +28,7 @@ impl Greeter for MyGreeter {
         Ok(Response::new(reply))
     }
 
-    async fn scan(
-        &self,
-        request: Request<ScanRequest>,
-    ) -> Result<Response<ScanReply>, Status> {
+    async fn scan(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
         let url = req.url.clone();
 
@@ -40,19 +36,17 @@ impl Greeter for MyGreeter {
             message: format!("scanning {:?}!", &url).into(),
         };
 
-        let handle = thread::spawn(move || {
-            scanPage(url, req.id);
+        tokio::spawn(async move {
+            scanPage(url, req.id)
+                .await
+                .unwrap_or_else(|e| println!("{:?}", e));
         });
-      
-        drop(handle);
 
         Ok(Response::new(reply))
     }
 
-    async fn crawl(
-        &self,
-        request: Request<ScanRequest>,
-    ) -> Result<Response<ScanReply>, Status> {
+    // used to gather all links first before sending to api [TODO]
+    async fn crawl(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
         let url = req.url.clone();
 
@@ -60,21 +54,22 @@ impl Greeter for MyGreeter {
             message: format!("scanning {:?}!", &url).into(),
         };
 
-        let handle = thread::spawn(move || {
-            scanPage(url, req.id);
+        tokio::spawn(async move {
+            scanPage(url, req.id)
+                .await
+                .unwrap_or_else(|e| println!("{:?}", e));
         });
-      
-        drop(handle);
 
         Ok(Response::new(reply))
     }
-
 }
 
 // start the grpc server
 pub async fn grpc_start() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = option_env!("GRPC_HOST").unwrap_or("[::1]:50055").parse()?;
     let greeter = MyGreeter::default();
+
+    println!("grpc server listening on 0.0.0.0:50055");
 
     Server::builder()
         .add_service(GreeterServer::new(greeter))

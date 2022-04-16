@@ -15,18 +15,11 @@ extern crate tonic;
 
 pub mod interface;
 pub mod routes;
-pub mod hooks;
-pub mod scanner;
 pub mod rpc;
+pub mod scanner;
 
-pub use rpc::server::{ grpc_start };
+pub use rpc::server::grpc_start;
 
 pub fn rocket() -> rocket::Rocket {
-	rocket::ignite()
-		.mount(
-			"/",
-			routes![
-				routes::status::get_health,
-			],
-		)
+    rocket::ignite().mount("/", routes![routes::status::get_health])
 }

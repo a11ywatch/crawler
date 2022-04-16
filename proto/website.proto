@@ -4,10 +4,14 @@ package website;
 
 service WebsiteService {
    rpc Scan (ScanParams) returns (Empty) {}
+   rpc ScanStart (ScanParams) returns (Empty) {}
+   rpc ScanEnd (ScanParams) returns (Empty) {}
 }
 
 message ScanParams {
    repeated string pages = 1;
+   string domain = 2;
+   uint32 user_id = 3;
 }
 
 message Empty {}
