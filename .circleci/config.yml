@@ -1,9 +1,9 @@
 version: 2.1
 jobs:
   crawler:
-    docker:
-      - image: rustlang/rust:nightly
-    resource_class: large
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
     environment:
       RUSTFLAGS: "-D warnings"
     steps:
@@ -14,10 +14,13 @@ jobs:
             - node-v1-{{ .Branch }}-
             - node-v1-
       - run:
-          command: apt-get update && apt-get install -y --no-install-recommends  gcc cmake libc6 libssl-dev
-      - run:
-          command: cargo install --no-default-features --path . && cargo test
-          no_output_timeout: 30m
+          name: Install Rust
+          command: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup.sh
+            chmod +x rustup.sh
+            ./rustup.sh -y
+            source "$HOME"/.cargo/env
+      - run: cargo test --all-features
       - save_cache:
           paths:
             - ~/usr/local/lib/target
