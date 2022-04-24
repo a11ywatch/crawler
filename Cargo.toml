@@ -11,8 +11,8 @@ keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-gene
 categories = ["web", "accessibility", "crawler"]
 
 [dependencies]
-spider = "1.6.0"
-tokio = { version = "1.17.0", features = ["rt-multi-thread", "net", "macros"] }
+spider = "1.7.1"
+tokio = { version = "1.17.0", features = [ "rt-multi-thread", "net", "macros" ] }
 tonic = "0.7"
 prost = "0.10"
 num_cpus = "1.13.0"

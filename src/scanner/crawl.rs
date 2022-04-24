@@ -1,14 +1,12 @@
 use crate::rpc::client::monitor_page_async;
 use crate::rpc::client::website::ScanParams;
 use spider::website::Website;
-use std::env::var;
 
 pub async fn crawl(domain: String, user_id: u32) {
     let mut website: Website = Website::new(&domain);
     let mut pages: Vec<String> = Vec::new();
 
     website.configuration.respect_robots_txt = true;
-    website.configuration.verbose = var("RUST_LOG").unwrap() == "true";
     website.configuration.delay = 50;
     website.crawl();
 
