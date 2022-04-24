@@ -8,7 +8,7 @@ ENV GRPC_HOST_API=api:50051
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    gcc cmake libc6 libssl-dev
+    gcc cmake libc6 openssl
 
 RUN cargo install --no-default-features --path .
 
@@ -16,7 +16,7 @@ FROM debian:buster-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    ca-certificates libssl-dev
+    ca-certificates openssl
 
 COPY --from=builder /usr/local/cargo/bin/website_crawler /usr/local/bin/website_crawler
 COPY --from=builder /usr/local/cargo/bin/health_client /usr/local/bin/health_client
