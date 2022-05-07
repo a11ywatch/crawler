@@ -7,7 +7,7 @@ pub async fn crawl(domain: String, user_id: u32) {
     let mut pages: Vec<String> = Vec::new();
 
     website.configuration.respect_robots_txt = true;
-    website.configuration.delay = 50;
+    website.configuration.delay = 10;
     website.crawl();
 
     for page in website.get_pages() {

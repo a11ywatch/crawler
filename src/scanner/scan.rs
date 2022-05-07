@@ -10,7 +10,7 @@ pub async fn scan(domain: String, user_id: u32) -> Result<(), core::fmt::Error> 
     let mut client = create_client().await.unwrap();
     let mut website: Website = Website::new(&domain);
     website.configuration.respect_robots_txt = true;
-    website.configuration.delay = 0;
+    website.configuration.delay = 15;
     website.on_link_find_callback = monitor_page;
 
     let web_site = ScanParams {
