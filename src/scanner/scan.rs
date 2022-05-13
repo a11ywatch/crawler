@@ -12,19 +12,20 @@ pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent
     let mut website: Website = Website::new(domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
-    
+
     website.configuration.delay = 15;
     // TODO: re-use client in monitor.
     website.on_link_find_callback = monitor_page;
 
     if !agent.is_empty() {
-        website.configuration.user_agent = Box::leak(agent.to_owned().into_boxed_str());
+        website.configuration.user_agent = agent.into();
     };
 
     let web_site = ScanParams {
         pages: [].to_vec(),
         domain: domain.into(),
         user_id,
+        full: false
     };
 
     // send scan start tracking user for following request

@@ -8,11 +8,11 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
     let mut pages: Vec<String> = Vec::new();
 
     website.configuration.respect_robots_txt = respect_robots_txt;
-    
+
     website.configuration.delay = 10;
 
     if !agent.is_empty() {
-        website.configuration.user_agent = Box::leak(agent.to_owned().into_boxed_str());
+        website.configuration.user_agent = agent.into();
     };
 
     website.crawl();
@@ -25,6 +25,7 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
         pages,
         user_id,
         domain: domain.into(),
+        full: true
     };
 
     monitor_page_async(web_site)
