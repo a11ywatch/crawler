@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package crawler;
 
+// TODO: rename service to match prost rust service
 service Greeter {
     rpc Scan (ScanRequest) returns (ScanReply) {}
     rpc Crawl (ScanRequest) returns (ScanReply) {}
@@ -12,14 +13,8 @@ message ScanReply {
 }
 
 message ScanRequest {
-    string url = 1;
-    uint32 id = 2;
-}
-
-message HelloRequest {
-   string name = 1;
-}
-
-message HelloReply {
-    string message = 1;
+    string url = 1; // the base request to start crawling/indexing pages.
+    uint32 id = 2; // the user id or identifier to track crawl subs.
+    bool norobots = 3; // ignore respect robots txt file rules.
+    string agent = 4; // User agent to use when crawling.
 }
