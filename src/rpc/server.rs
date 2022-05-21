@@ -14,13 +14,12 @@ pub struct MyGreeter;
 
 #[tonic::async_trait]
 impl Greeter for MyGreeter {
-    // TODO: MOVE TO STREAM INSTEAD OF SENDING RPC FROM CLIENT BACK
+    /// start scanning a website giving links crawled in realtime to gRPC API. TODO: move to stream.
     async fn scan(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
 
         let url = req.url;
         let respect_robots_txt = req.norobots == false;
-
         let agent = req.agent;
 
         let reply = crawler::ScanReply {
@@ -28,12 +27,12 @@ impl Greeter for MyGreeter {
         };
 
         tokio::spawn(async move {
-            scanPage(&url, req.id, respect_robots_txt, &agent).await.expect("scan failed to start");
+            scanPage(&url, req.id, respect_robots_txt, &agent).await.unwrap_or_default();
         });
 
         Ok(Response::new(reply))
     }
-    /// used to gather all links first before sending to api
+    /// crawl website and send all links crawled when completed to API client gRPC.
     async fn crawl(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
         
@@ -46,7 +45,7 @@ impl Greeter for MyGreeter {
         };
 
         tokio::spawn(async move {
-            crawlPage(&url, req.id, respect_robots_txt, &agent).await.expect("crawl failed to start");
+            crawlPage(&url, req.id, respect_robots_txt, &agent).await.unwrap_or_default();
         });
 
         Ok(Response::new(reply))

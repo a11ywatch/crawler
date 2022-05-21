@@ -18,15 +18,11 @@ You can use the program as a docker image.
 
 ## Crate
 
-You can use the [crate](https://crates.io/crates/website_crawler) to setup a tcp server to run on the machine.
-
-## About
-
-This project uses the [spider](https://github.com/madeindjs/spider) crate. We also helped in the projects development to be the fastest open-source web crawler.
+You can use the [crate](https://crates.io/crates/website_crawler) to setup a gRPC server to run on the machine.
 
 ## gRPC
 
-In order to use the crawler atm you need to add the grpc client based in the proto location called website.proto. Streams support is in the making to remove the extra need for the client.
+In order to use the crawler atm you need to add the grpc client based in the proto location called `website.proto.` Streams support is in the making to remove the extra need for the client.
 
 ## LICENSE
 

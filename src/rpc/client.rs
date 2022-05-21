@@ -5,9 +5,9 @@ pub mod website {
 use std::env::var;
 use tonic::transport::Channel;
 use website::{website_service_client::WebsiteServiceClient, ScanParams};
-use tokio::runtime::{Runtime};
+use tokio;
 
-// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// get the gRPC client address for the API server.
 pub fn get_client_address() -> String {
     format!(
         "http://{}",
@@ -15,14 +15,14 @@ pub fn get_client_address() -> String {
     )
 }
 
-// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// create gRPC client from the API server.
 pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::transport::Error> {
     let client = WebsiteServiceClient::connect(get_client_address()).await?;
 
     Ok(client)
 }
 
-// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// request to the API server that scan has started.
 pub async fn monitor_page_start(
     client: &mut WebsiteServiceClient<Channel>,
     page: &ScanParams,
@@ -34,7 +34,7 @@ pub async fn monitor_page_start(
     Ok(())
 }
 
-// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// request to the API server that scan has finished.
 pub async fn monitor_page_complete(
     client: &mut WebsiteServiceClient<Channel>,
     page: &ScanParams,
@@ -46,6 +46,7 @@ pub async fn monitor_page_complete(
     Ok(())
 }
 
+/// request to the API server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
 pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     let mut client = create_client().await.unwrap();
     let request = tonic::Request::new(page);
@@ -55,7 +56,7 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     Ok(())
 }
 
-// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
 pub async fn monitor_link_async(link: &String) -> Result<(), tonic::Status> {
     let mut client = create_client().await.unwrap();
 
@@ -71,16 +72,13 @@ pub async fn monitor_link_async(link: &String) -> Result<(), tonic::Status> {
     Ok(())
 }
 
+#[tokio::main(flavor = "current_thread")]
 /// callback to run on website link find
-pub fn monitor_page(link: String) -> String {
+pub async fn monitor_page(link: String) -> String {
     let link_target = link.clone();
-    let rt = Runtime::new().unwrap();
     
-    rt.block_on(async move {
-        monitor_link_async(&link_target)
-            .await
-            .unwrap_or_else(|e| println!("monitor task error: {:?}", e));
-    });
+    monitor_link_async(&link_target).await
+        .unwrap_or_else(|e| println!("monitor task error: {:?}", e));
 
     link
 }
