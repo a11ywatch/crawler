@@ -13,9 +13,8 @@ pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent
 
     website.configuration.respect_robots_txt = respect_robots_txt;
 
-    website.configuration.delay = 15;
-    // TODO: re-use client in monitor.
-    website.on_link_find_callback = monitor_page;
+    website.configuration.delay = 120; // delay for sake of not blowing up client and crawl blockings.
+    website.on_link_find_callback = monitor_page; // TODO: re-use client in monitor.
 
     if !agent.is_empty() {
         website.configuration.user_agent = agent.into();

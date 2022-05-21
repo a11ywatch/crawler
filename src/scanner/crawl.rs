@@ -9,7 +9,7 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
 
     website.configuration.respect_robots_txt = respect_robots_txt;
 
-    website.configuration.delay = 10;
+    website.configuration.delay = 18;
 
     if !agent.is_empty() {
         website.configuration.user_agent = agent.into();
