@@ -4,7 +4,7 @@ use crate::rpc::client::monitor_page_complete;
 use crate::rpc::client::monitor_page_start;
 
 use crate::rpc::client::website::ScanParams;
-use spider::website::Website;
+use crate::packages::spider::website::Website;
 
 /// crawl all pages and send request as links are found. TODO: move to stream instead of callback.
 pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent: &String) -> Result<(), core::fmt::Error> {
