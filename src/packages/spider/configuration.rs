@@ -3,7 +3,7 @@ use std::env;
 
 /// Structure to configure `Website` crawler
 /// ```rust
-/// use spider::website::Website;
+/// use website_crawler::spider::website::Website;
 /// let mut website: Website = Website::new("https://choosealicense.com");
 /// website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".to_string());
 /// website.configuration.respect_robots_txt = true;

@@ -13,9 +13,12 @@ use reqwest::header::CONNECTION;
 use reqwest::header;
 use tokio::time::sleep;
 
+use tonic::transport::Channel;
+use crate::rpc::client::{WebsiteServiceClient, ScanParams, monitor};
+
 /// Represents a website to crawl and gather all links.
 /// ```rust
-/// use spider::website::Website;
+/// use website_crawler::spider::website::Website;
 /// let mut localhost = Website::new("http://example.com");
 /// localhost.crawl();
 /// // `Website` will be filled with `Pages` when crawled. To get them, just use
@@ -120,8 +123,16 @@ impl<'a> Website<'a> {
     /// Start to crawl website with async parallelization
     pub fn crawl(&mut self) {
         let client = self.setup();
-
         self.crawl_concurrent(&client);
+    }
+
+    /// Start to crawl website with async parallelization gRPC
+    pub async fn crawl_grpc(&mut self, rpc_client: &mut WebsiteServiceClient<Channel>) -> Result<(), core::fmt::Error> {
+        let client = self.setup();
+
+        self.crawl_concurrent_rpc(&client, rpc_client).await?;
+
+        Ok(())
     }
 
     /// Start to scrape website with async parallelization
@@ -143,7 +154,6 @@ impl<'a> Website<'a> {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
-        let on_link_find_callback = self.on_link_find_callback;
         
         // crawl while links exists
         while !self.links.is_empty() {
@@ -165,8 +175,8 @@ impl<'a> Website<'a> {
                     if delay_enabled {
                         tokio_sleep(&Duration::from_millis(delay));
                     }
-                    let link_result = on_link_find_callback(link);
-                    let page = Page::new(&link_result, &cx);
+                    
+                    let page = Page::new(&link, &cx);
                     let links = page.links();
 
                     tx.send(links).unwrap();
@@ -183,6 +193,62 @@ impl<'a> Website<'a> {
 
             self.links = &new_links - &self.links_visited;
         }
+    }
+
+    /// Start to crawl website concurrently using gRPC callback
+    async fn crawl_concurrent_rpc(&mut self, client: &Client, grpc_client: &mut WebsiteServiceClient<Channel>) -> Result<(), core::fmt::Error> {
+        let pool = self.create_thread_pool();
+        let delay = self.configuration.delay;
+        let delay_enabled = delay > 0;
+        
+        // crawl while links exists
+        while !self.links.is_empty() {
+            let (tx, rx): (Sender<Message>, Receiver<Message>) = channel();
+
+            for link in self.links.iter() {
+                if !self.is_allowed(link) {
+                    continue;
+                }
+                log("fetch", link);
+
+                self.links_visited.insert(link.into());
+
+                let page = ScanParams {
+                    pages: [link.clone()].to_vec(),
+                    ..Default::default()
+                };
+
+                let link = link.clone();
+                let tx = tx.clone();
+                let cx = client.clone();
+                let mut rpcx = grpc_client.clone();
+
+                monitor(&mut rpcx, &page).await.unwrap(); // use main thread for network call. ns to complete.
+                
+                pool.spawn(move || {
+                    if delay_enabled {
+                        tokio_sleep(&Duration::from_millis(delay));
+                    }
+
+                    let page = Page::new(&link, &cx);
+                    let links = page.links();
+
+                    tx.send(links).unwrap();
+                });
+            }
+
+            drop(tx);
+
+            let mut new_links: HashSet<String> = HashSet::new();
+
+            rx.into_iter().for_each(|links| {
+                new_links.extend(links);
+            });
+
+            self.links = &new_links - &self.links_visited;
+        }
+
+        Ok(())
     }
 
     /// Start to crawl website sequential
@@ -298,7 +364,7 @@ impl<'a> Drop for Website<'a> {
     fn drop(&mut self) {}
 }
 
-// blocking sleep keeping thread alive
+/// blocking sleep keeping thread alive
 #[tokio::main]
 async fn tokio_sleep(delay: &Duration){
     sleep(*delay).await;

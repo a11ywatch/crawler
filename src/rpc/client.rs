@@ -4,7 +4,9 @@ pub mod website {
 
 use std::env::var;
 use tonic::transport::Channel;
-use website::{website_service_client::WebsiteServiceClient, ScanParams};
+
+pub use website::{website_service_client::WebsiteServiceClient, ScanParams};
+
 use tokio;
 
 /// get the gRPC client address for the API server.
@@ -50,6 +52,19 @@ pub async fn monitor_page_complete(
 pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     let mut client = create_client().await.unwrap();
     let request = tonic::Request::new(page);
+
+    client.scan(request).await?;
+
+    Ok(())
+}
+
+
+/// request to the API server to perform scan action to gather results re-using connection.
+pub async fn monitor(
+    client: &mut WebsiteServiceClient<Channel>,
+    page: &ScanParams,
+) -> Result<(), tonic::Status> {
+    let request = tonic::Request::new(page.to_owned());
 
     client.scan(request).await?;
 
