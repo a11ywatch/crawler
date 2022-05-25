@@ -12,9 +12,9 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 use reqwest::header::CONNECTION;
 use reqwest::header;
 use tokio::time::sleep;
-
 use tonic::transport::Channel;
-use crate::rpc::client::{WebsiteServiceClient, ScanParams, monitor};
+use crate::rpc::client::{WebsiteServiceClient, monitor};
+use tokio;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -127,12 +127,10 @@ impl<'a> Website<'a> {
     }
 
     /// Start to crawl website with async parallelization gRPC
-    pub async fn crawl_grpc(&mut self, rpc_client: &mut WebsiteServiceClient<Channel>) -> Result<(), core::fmt::Error> {
+    pub async fn crawl_grpc(&mut self, rpc_client: &mut WebsiteServiceClient<Channel>) {
         let client = self.setup();
 
-        self.crawl_concurrent_rpc(&client, rpc_client).await?;
-
-        Ok(())
+        self.crawl_concurrent_rpc(&client, rpc_client).await;
     }
 
     /// Start to scrape website with async parallelization
@@ -196,7 +194,7 @@ impl<'a> Website<'a> {
     }
 
     /// Start to crawl website concurrently using gRPC callback
-    async fn crawl_concurrent_rpc(&mut self, client: &Client, grpc_client: &mut WebsiteServiceClient<Channel>) -> Result<(), core::fmt::Error> {
+    async fn crawl_concurrent_rpc(&mut self, client: &Client, grpc_client: &mut WebsiteServiceClient<Channel>) {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
@@ -213,19 +211,16 @@ impl<'a> Website<'a> {
 
                 self.links_visited.insert(link.into());
 
-                let page = ScanParams {
-                    pages: [link.clone()].to_vec(),
-                    ..Default::default()
-                };
-
+                let thread_link = link.clone();
+                let mut rpcx = grpc_client.clone();
+                
                 let link = link.clone();
                 let tx = tx.clone();
                 let cx = client.clone();
-                let mut rpcx = grpc_client.clone();
 
-                monitor(&mut rpcx, &page).await.unwrap(); // use main thread for network call. ns to complete.
-                
                 pool.spawn(move || {
+                    monitor(&mut rpcx, thread_link);
+
                     if delay_enabled {
                         tokio_sleep(&Duration::from_millis(delay));
                     }
@@ -248,7 +243,6 @@ impl<'a> Website<'a> {
             self.links = &new_links - &self.links_visited;
         }
 
-        Ok(())
     }
 
     /// Start to crawl website sequential

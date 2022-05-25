@@ -58,18 +58,21 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     Ok(())
 }
 
-
-/// request to the API server to perform scan action to gather results re-using connection.
+#[tokio::main]
 pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
-    page: &ScanParams,
-) -> Result<(), tonic::Status> {
-    let request = tonic::Request::new(page.to_owned());
+    link: String,
+) {
+    let page = ScanParams {
+        pages: [link.clone()].to_vec(),
+        ..Default::default()
+    };
+    let request = tonic::Request::new(page);
 
-    client.scan(request).await?;
+    client.scan(request).await.unwrap();
 
-    Ok(())
 }
+
 
 /// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
 pub async fn monitor_link_async(link: &String) -> Result<(), tonic::Status> {

@@ -24,17 +24,19 @@ pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent
         full: false
     };
 
+    let mut start_client = client.clone();
+
     // send scan start tracking user for following request
-    monitor_page_start(&mut client, &web_site)
+    monitor_page_start(&mut start_client, &web_site)
         .await
         .unwrap_or_else(|e| println!("{} - crawl start failed.", e));
 
-    website.crawl_grpc(&mut client)
-        .await
-        .unwrap_or_else(|e| println!("{} - crawling pages failed.", e));
+    let mut end_client = client.clone();
+
+    website.crawl_grpc(&mut client).await;
 
     // send scan complete
-    monitor_page_complete(&mut client, &web_site)
+    monitor_page_complete(&mut end_client, &web_site)
         .await
         .unwrap_or_else(|e| println!("{} - crawl completed failed.", e));
 

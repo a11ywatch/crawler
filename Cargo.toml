@@ -11,8 +11,8 @@ keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-gene
 categories = ["web", "accessibility", "crawler"]
 
 [dependencies]
-tokio = { version = "^1.18.2", features = [ "rt-multi-thread", "net", "macros", "time" ] }
-tonic = "0.7.2"
+tokio = { version = "^1.18.2", features = [ "rt-multi-thread", "rt", "net", "macros", "time" ] }
+tonic  = { version = "0.7.2", features = ["transport"] }
 prost = "0.10"
 num_cpus = "1.13.0"
 reqwest = { version = "0.11.10", features = ["blocking"] }
@@ -24,6 +24,7 @@ regex = { version = "^1.5.0", optional = true }
 hashbrown = { version = "0.12" }
 log = "0.4.16"
 lazy_static = "1.4.0"
+futures = { version = "^0.3.2" }
 
 [[bin]]
 name = "health_client"
