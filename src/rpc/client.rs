@@ -58,7 +58,6 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     Ok(())
 }
 
-#[tokio::main]
 pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
     link: String,
@@ -70,7 +69,6 @@ pub async fn monitor(
     let request = tonic::Request::new(page);
 
     client.scan(request).await.unwrap();
-
 }
 
 

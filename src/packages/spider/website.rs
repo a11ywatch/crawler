@@ -198,7 +198,8 @@ impl<'a> Website<'a> {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
-        
+        let rpcx = grpc_client.clone().to_owned();
+
         // crawl while links exists
         while !self.links.is_empty() {
             let (tx, rx): (Sender<Message>, Receiver<Message>) = channel();
@@ -212,15 +213,15 @@ impl<'a> Website<'a> {
                 self.links_visited.insert(link.into());
 
                 let thread_link = link.clone();
-                let mut rpcx = grpc_client.clone();
+                let mut rpcx = rpcx.clone().to_owned();
                 
                 let link = link.clone();
                 let tx = tx.clone();
                 let cx = client.clone();
 
-                pool.spawn(move || {
-                    monitor(&mut rpcx, thread_link);
+                monitor(&mut rpcx, thread_link).await;
 
+                pool.spawn(move || {
                     if delay_enabled {
                         tokio_sleep(&Duration::from_millis(delay));
                     }
