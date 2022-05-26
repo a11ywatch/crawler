@@ -9,6 +9,7 @@ service WebsiteService {
    rpc ScanStart (ScanParams) returns (Empty) {} // track when scan starts.
    rpc ScanEnd (ScanParams) returns (Empty) {} // tracks when scan completes.
    rpc Scan (ScanParams) returns (Empty) {} // non stream scanning allowing for full track up time for keep alive cost [TODO: look into removal for full stream].
+   rpc ScanStream (ScanParams) returns (stream Empty) {} // stream the scan request and simply return.
 }
 
 message ScanParams {

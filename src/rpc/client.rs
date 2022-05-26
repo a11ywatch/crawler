@@ -8,6 +8,7 @@ use tonic::transport::Channel;
 pub use website::{website_service_client::WebsiteServiceClient, ScanParams};
 
 use tokio;
+use crate::spider::utils::{log};
 
 /// get the gRPC client address for the API server.
 pub fn get_client_address() -> String {
@@ -71,7 +72,12 @@ pub async fn monitor(
     };
     let request = tonic::Request::new(page);
 
-    client.scan(request).await.unwrap();
+    let mut stream = client.scan_stream(request).await.unwrap().into_inner();
+
+    while let Some(_) = stream.message().await.unwrap() {
+        log("gRPC(stream): finished -", link.clone());
+    }
+
 }
 
 
