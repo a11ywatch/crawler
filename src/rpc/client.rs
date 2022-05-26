@@ -58,12 +58,15 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     Ok(())
 }
 
+/// run a accessibility scan waiting for results.
 pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
     link: String,
+    user_id: u32
 ) {
     let page = ScanParams {
         pages: [link.clone()].to_vec(),
+        user_id,
         ..Default::default()
     };
     let request = tonic::Request::new(page);

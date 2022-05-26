@@ -127,10 +127,10 @@ impl<'a> Website<'a> {
     }
 
     /// Start to crawl website with async parallelization gRPC
-    pub async fn crawl_grpc(&mut self, rpc_client: &mut WebsiteServiceClient<Channel>) {
+    pub async fn crawl_grpc(&mut self, rpc_client: &mut WebsiteServiceClient<Channel>, user_id: u32) {
         let client = self.setup();
 
-        self.crawl_concurrent_rpc(&client, rpc_client).await;
+        self.crawl_concurrent_rpc(&client, rpc_client, user_id).await;
     }
 
     /// Start to scrape website with async parallelization
@@ -194,7 +194,7 @@ impl<'a> Website<'a> {
     }
 
     /// Start to crawl website concurrently using gRPC callback
-    async fn crawl_concurrent_rpc(&mut self, client: &Client, grpc_client: &mut WebsiteServiceClient<Channel>) {
+    async fn crawl_concurrent_rpc(&mut self, client: &Client, grpc_client: &mut WebsiteServiceClient<Channel>, user_id: u32) {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
@@ -219,7 +219,7 @@ impl<'a> Website<'a> {
                 let tx = tx.clone();
                 let cx = client.clone();
 
-                monitor(&mut rpcx, thread_link).await;
+                monitor(&mut rpcx, thread_link, user_id).await;
 
                 pool.spawn(move || {
                     if delay_enabled {

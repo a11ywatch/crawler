@@ -33,7 +33,7 @@ pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent
 
     let mut end_client = client.clone();
 
-    website.crawl_grpc(&mut client).await;
+    website.crawl_grpc(&mut client, user_id).await;
 
     // send scan complete
     monitor_page_complete(&mut end_client, &web_site)

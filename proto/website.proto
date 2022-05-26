@@ -2,10 +2,13 @@ syntax = "proto3";
 
 package website;
 
+// send nothing
+message Empty {}
+
 service WebsiteService {
-   rpc Scan (ScanParams) returns (Empty) {}
-   rpc ScanStart (ScanParams) returns (Empty) {}
-   rpc ScanEnd (ScanParams) returns (Empty) {}
+   rpc ScanStart (ScanParams) returns (Empty) {} // track when scan starts.
+   rpc ScanEnd (ScanParams) returns (Empty) {} // tracks when scan completes.
+   rpc Scan (ScanParams) returns (Empty) {} // non stream scanning allowing for full track up time for keep alive cost [TODO: look into removal for full stream].
 }
 
 message ScanParams {
@@ -14,5 +17,3 @@ message ScanParams {
    uint32 user_id = 3; // user id performing scan.
    bool full = 4; // full crawl awaiting all links.
 }
-
-message Empty {}
