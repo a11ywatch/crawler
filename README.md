@@ -6,7 +6,7 @@ Crawls websites to gather all possible pages really fast and uses gRPC.
 
 ## Getting Started
 
-Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or use Docker. This project requires that you start up another gRPC server on port `50051` following [proto](https://github.com/A11yWatch/crawler/blob/main/proto/website.proto) spec. We are working on adding streams instead of a post hook approach. The server sends all request into another thread and follows up on extracting the links via gRPC callbacks.
+Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or use Docker. This project requires that you start up another gRPC server on port `50051` following [proto](https://github.com/A11yWatch/crawler/blob/main/proto/website.proto) spec - [gRPC node example](https://github.com/A11yWatch/a11ywatch-core/blob/main/src/proto/website-server.ts). This crawler is optimized for reduced latency and performance as it can handle over 10,000 pages within seconds.
 
 1. `cargo run` or `docker compose up`
 

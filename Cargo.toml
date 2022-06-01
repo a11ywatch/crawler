@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["jeffreymendez <jeffmendez19@gmail.com>"]
 edition = "2021"
 description = "crawl all urls on a website async & sync"
@@ -8,7 +8,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/A11yWatch/crawler"
 keywords = ["crawler", "website-crawler", "spider", "url-finder", "site-map-generator"]
-categories = ["web", "accessibility", "crawler"]
+categories = ["accessibility", "asynchronous"]
 
 [dependencies]
 tokio = { version = "^1.17.0", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }

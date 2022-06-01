@@ -49,7 +49,7 @@ pub async fn monitor_page_complete(
     Ok(())
 }
 
-/// request to the API server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// request to the API server to perform scan action to gather results.
 pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
     let mut client = create_client().await.unwrap();
     let request = tonic::Request::new(page);
@@ -81,7 +81,7 @@ pub async fn monitor(
 }
 
 
-/// make request to the api server to perform scan action to gather results [TODO: MOVE CONNECTION OUTSIDE]
+/// make request to the api server to perform scan action to gather results.
 pub async fn monitor_link_async(link: &String) -> Result<(), tonic::Status> {
     let mut client = create_client().await.unwrap();
 
