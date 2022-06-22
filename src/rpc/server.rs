@@ -2,7 +2,7 @@ pub mod crawler {
     tonic::include_proto!("crawler");
 }
 
-pub use crawler::greeter_server::{Greeter, GreeterServer};
+pub use crawler::crawler_server::{Crawler, CrawlerServer};
 pub use crawler::{ScanReply, ScanRequest};
 use tonic::{Request, Response, Status};
 
@@ -10,10 +10,10 @@ use crate::scanner::scan::scan as scanPage;
 use crate::scanner::crawl::crawl as crawlPage;
 
 #[derive(Debug, Default)]
-pub struct MyGreeter;
+pub struct MyCrawler;
 
 #[tonic::async_trait]
-impl Greeter for MyGreeter {
+impl Crawler for MyCrawler {
     /// start scanning a website giving links crawled in realtime to gRPC API. TODO: move to stream.
     async fn scan(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
