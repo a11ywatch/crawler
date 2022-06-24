@@ -6,12 +6,14 @@ use crate::rpc::client::website::ScanParams;
 use crate::packages::spider::website::Website;
 
 /// crawl all pages and send request as links are found. TODO: move to stream instead of callback uses gRPC callback in spider.
-pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent: &String) -> Result<(), core::fmt::Error> {
+pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent: &String, subdomains: bool, tld: bool) -> Result<(), core::fmt::Error> {
     let mut client = create_client().await.unwrap();
     let mut website: Website = Website::new(domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
     website.configuration.delay = 14; // delay for sake of not blowing up client and crawl blockings.
+    website.configuration.subdomains = subdomains;
+    website.configuration.tld = tld;
 
     if !agent.is_empty() {
         website.configuration.user_agent = agent.into();

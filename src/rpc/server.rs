@@ -21,13 +21,15 @@ impl Crawler for MyCrawler {
         let url = req.url;
         let respect_robots_txt = req.norobots == false;
         let agent = req.agent;
+        let subdomains = req.subdomains;
+        let tld = req.tld;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
         };
 
         tokio::spawn(async move {
-            scanPage(&url, req.id, respect_robots_txt, &agent).await.unwrap_or_default();
+            scanPage(&url, req.id, respect_robots_txt, &agent, subdomains, tld).await.unwrap_or_default();
         });
 
         Ok(Response::new(reply))
@@ -39,13 +41,15 @@ impl Crawler for MyCrawler {
         let url = req.url;
         let respect_robots_txt = req.norobots == false;
         let agent = req.agent;
+        let subdomains = req.subdomains;
+        let tld = req.tld;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
         };
 
         tokio::spawn(async move {
-            crawlPage(&url, req.id, respect_robots_txt, &agent).await.unwrap_or_default();
+            crawlPage(&url, req.id, respect_robots_txt, &agent, subdomains, tld).await.unwrap_or_default();
         });
 
         Ok(Response::new(reply))

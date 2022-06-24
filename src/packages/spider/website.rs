@@ -152,7 +152,9 @@ impl<'a> Website<'a> {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
-        
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
+
         // crawl while links exists
         while !self.links.is_empty() {
             let (tx, rx): (Sender<Message>, Receiver<Message>) = channel();
@@ -175,7 +177,7 @@ impl<'a> Website<'a> {
                     }
                     
                     let page = Page::new(&link, &cx);
-                    let links = page.links();
+                    let links = page.links(subdomains, tld);
 
                     tx.send(links).unwrap();
                 });
@@ -199,6 +201,8 @@ impl<'a> Website<'a> {
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
         let rpcx = grpc_client.clone().to_owned();
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
 
         // crawl while links exists
         while !self.links.is_empty() {
@@ -227,7 +231,7 @@ impl<'a> Website<'a> {
                     }
 
                     let page = Page::new(&link, &cx);
-                    let links = page.links();
+                    let links = page.links(subdomains, tld);
 
                     tx.send(links).unwrap();
                 });
@@ -251,7 +255,9 @@ impl<'a> Website<'a> {
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
         let on_link_find_callback = self.on_link_find_callback;
-        
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
+
         // crawl while links exists
         while !self.links.is_empty() {
             let mut new_links: HashSet<String> = HashSet::new();
@@ -270,7 +276,7 @@ impl<'a> Website<'a> {
                 let cx = client.clone();
                 let link_result = on_link_find_callback(link);
                 let page = Page::new(&link_result, &cx);
-                let links = page.links();
+                let links = page.links(subdomains, tld);
 
                 new_links.extend(links);
             }
@@ -285,7 +291,9 @@ impl<'a> Website<'a> {
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
         let on_link_find_callback = self.on_link_find_callback;
-        
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
+
         // crawl while links exists
         while !self.links.is_empty() {
             let (tx, rx): (Sender<Page>, Receiver<Page>) = channel();
@@ -318,7 +326,7 @@ impl<'a> Website<'a> {
             let mut new_links: HashSet<String> = HashSet::new();
 
             rx.into_iter().for_each(|page| {
-                let links = page.links();
+                let links = page.links(subdomains, tld);
                 new_links.extend(links);
                 self.pages.push(page);
             });
