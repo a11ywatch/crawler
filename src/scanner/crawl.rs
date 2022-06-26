@@ -8,7 +8,6 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
     let mut pages: Vec<String> = Vec::new();
 
     website.configuration.respect_robots_txt = respect_robots_txt;
-
     website.configuration.delay = 18;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;

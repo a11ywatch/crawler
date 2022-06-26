@@ -15,7 +15,7 @@ RUN cargo install --no-default-features --path .
 FROM debian:buster-slim
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends build-essential \
     ca-certificates openssl
 
 COPY --from=builder /usr/local/cargo/bin/website_crawler /usr/local/bin/website_crawler

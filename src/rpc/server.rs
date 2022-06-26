@@ -21,8 +21,8 @@ impl Crawler for MyCrawler {
         let url = req.url;
         let respect_robots_txt = req.norobots == false;
         let agent = req.agent;
-        let subdomains = req.subdomains;
-        let tld = req.tld;
+        let subdomains = req.subdomains == true;
+        let tld = req.tld == true;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
@@ -41,8 +41,8 @@ impl Crawler for MyCrawler {
         let url = req.url;
         let respect_robots_txt = req.norobots == false;
         let agent = req.agent;
-        let subdomains = req.subdomains;
-        let tld = req.tld;
+        let subdomains = req.subdomains == true;
+        let tld = req.tld == true;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
