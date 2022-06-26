@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rustlang/rust:nightly AS builder
+FROM rust AS builder
 
 WORKDIR /app
 COPY . .
