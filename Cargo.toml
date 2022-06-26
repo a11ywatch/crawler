@@ -2,7 +2,7 @@
 name = "website_crawler"
 version = "0.2.3"
 authors = ["jeffreymendez <jeff@a11ywatch.com>"]
-edition = "2021"
+edition = "2018"
 description = "crawl all urls on a website async & sync"
 license = "MIT"
 readme = "README.md"

@@ -23,13 +23,14 @@ impl Crawler for MyCrawler {
         let agent = req.agent;
         let subdomains = req.subdomains == true;
         let tld = req.tld == true;
+        let id = req.id;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
         };
 
         tokio::spawn(async move {
-            scanPage(&url, req.id, respect_robots_txt, &agent, subdomains, tld).await.unwrap_or_default();
+            scanPage(&url, id, respect_robots_txt, &agent, subdomains, tld).await.unwrap_or_default();
         });
 
         Ok(Response::new(reply))
@@ -43,13 +44,14 @@ impl Crawler for MyCrawler {
         let agent = req.agent;
         let subdomains = req.subdomains == true;
         let tld = req.tld == true;
+        let id = req.id;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
         };
 
         tokio::spawn(async move {
-            crawlPage(&url, req.id, respect_robots_txt, &agent, subdomains, tld).await.unwrap_or_default();
+            crawlPage(&url, id, respect_robots_txt, &agent, subdomains, tld).await.unwrap_or_default();
         });
 
         Ok(Response::new(reply))

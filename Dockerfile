@@ -1,4 +1,4 @@
-FROM rust AS builder
+FROM rust:1.40 AS builder
 
 WORKDIR /app
 COPY . .
@@ -7,7 +7,7 @@ ENV GRPC_HOST=0.0.0.0:50055
 ENV GRPC_HOST_API=api:50051
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends build-essential \
     gcc cmake libc6 openssl
 
 RUN cargo install --no-default-features --path .
