@@ -32,7 +32,7 @@ RUN rustup target add $(cat /.platform)
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential libssl-dev unzip $(cat /.compiler)
 RUN apt-get update
 
-RUN cargo install  --path .
+RUN cargo install  --path . --no-default-features
 
 FROM --platform=$BUILDPLATFORM debian:bullseye-slim
 
