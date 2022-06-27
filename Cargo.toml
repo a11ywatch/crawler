@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["jeffreymendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "crawl all urls on a website async & sync"

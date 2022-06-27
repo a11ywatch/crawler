@@ -1,4 +1,4 @@
-FROM rust:latest AS builder
+FROM rust:bullseye AS builder
 
 WORKDIR /app
 COPY . .
@@ -12,7 +12,7 @@ RUN apt-get update \
 
 RUN cargo install --no-default-features --path .
 
-FROM debian:10.12-slim
+FROM debian:bullseye-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
