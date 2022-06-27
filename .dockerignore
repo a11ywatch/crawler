@@ -3,3 +3,4 @@ target
 tests
 Dockerfile.dev
 docker-compose.yml
+.github

@@ -20,6 +20,7 @@ jobs:
             chmod +x rustup.sh
             ./rustup.sh -y
             source "$HOME"/.cargo/env
+            sudo apt-get -y --no-install-recommends install libssl-dev
       - run: cargo test --all-features
       - save_cache:
           paths:

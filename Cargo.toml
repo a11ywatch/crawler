@@ -31,6 +31,21 @@ path = "src/hc_client.rs"
 
 [build-dependencies]
 tonic-build = "0.7"
+quote = "1.0.18"
+failure_derive = "0.1.8"
+cc = "=1.0"
+rustc_version = "0.4.0"
 
 [dev-dependencies]
 once_cell = "1.2.0"
+
+[profile.release]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
