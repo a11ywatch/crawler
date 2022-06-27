@@ -1,4 +1,4 @@
-FROM dockcross/base AS builder
+FROM --platform=$BUILDPLATFORM dockcross/base AS builder
 ARG TARGETARCH
 
 WORKDIR /app
@@ -17,6 +17,8 @@ RUN apt-get install -y \
 
 RUN apt-get update
 
+ENV GRPC_HOST=0.0.0.0:50055
+ENV GRPC_HOST_API=api:50051
 
 ENV PKG_CONFIG_ALLOW_CROSS=1
 ENV PKG_CONFIG_ALL_STATIC=1
@@ -28,11 +30,14 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup component add rustfmt
 RUN rustup target add $(cat /.platform) 
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential libssl-dev unzip $(cat /.compiler)
-RUN apt update
+RUN apt-get update
 
 RUN cargo install  --path .
 
-FROM debian:bullseye-slim
+FROM --platform=$BUILDPLATFORM debian:bullseye-slim
+
+ENV GRPC_HOST=0.0.0.0:50055
+ENV GRPC_HOST_API=api:50051
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
