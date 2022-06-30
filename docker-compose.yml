@@ -2,7 +2,6 @@ version: "3.0"
 services:
   crawler:
     container_name: crawler
-    env_file: .env
     build: .
     ports:
-      - "8000:8000"
+      - 50055

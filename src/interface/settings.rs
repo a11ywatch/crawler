@@ -9,6 +9,7 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// establish app wide settings.
     pub fn new(establish: bool) -> Settings {
         let grpc_api_host = var("GRPC_HOST_API").unwrap_or_else(|_| "0.0.0.0:50051".into());
         let configuration_verbose = match var("RUST_LOG") {

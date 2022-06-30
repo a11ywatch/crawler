@@ -3,7 +3,7 @@ use crate::rpc::server::{CrawlerServer, MyCrawler};
 use std::net::SocketAddr;
 use tonic::transport::Server;
 
-// start the grpc server
+/// start the grpc server
 pub async fn grpc_start() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = option_env!("GRPC_HOST")
         .unwrap_or("0.0.0.0:50055")

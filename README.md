@@ -2,27 +2,69 @@
 
 [![A11yWatch](https://circleci.com/gh/A11yWatch/crawler.svg?style=svg)](https://circleci.com/gh/A11yWatch/crawler)
 
-Crawls websites to gather all possible pages really fast and uses gRPC.
+A gRPC web indexer turbo charged for performance.
 
 ## Getting Started
 
-Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or use Docker. This project requires that you start up another gRPC server on port `50051` following [proto](https://github.com/A11yWatch/crawler/blob/main/proto/website.proto) spec - [gRPC node example](https://github.com/A11yWatch/a11ywatch-core/blob/main/src/proto/website-server.ts). This crawler is optimized for reduced latency and performance as it can handle over 10,000 pages within seconds.
+Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or Docker.
+
+This project requires that you start up another gRPC server on port `50051` following the [proto spec](https://github.com/A11yWatch/crawler/blob/main/proto/website.proto).
 
 1. `cargo run` or `docker compose up`
 
-### Docker Image
+## Installation
 
-You can use the program as a docker image.
+You can install easily with the following:
 
-[a11ywatch/crawler](https://hub.docker.com/repository/docker/a11ywatch/crawler).
+### Cargo
 
-## Crate
+The [crate](https://crates.io/crates/website_crawler) is available to setup a gRPC server within rust projects.
 
-You can use the [crate](https://crates.io/crates/website_crawler) to setup a gRPC server to run on the machine.
+```sh
+cargo install website_crawler
+```
 
-## gRPC
+### Docker
 
-In order to use the crawler atm you need to add the grpc client based in the proto location called `website.proto.` Streams support is in the making to remove the extra need for the client.
+You can use also use the docker image at [a11ywatch/crawler](https://hub.docker.com/repository/docker/a11ywatch/crawler).
+
+Set the `CRAWLER_IMAGE` env var to `darwin-arm64` to get the native m1 mac image.
+
+```yml
+crawler:
+  container_name: crawler
+  image: "a11ywatch/crawler:${CRAWLER_IMAGE:-latest}"
+  ports:
+    - 50055
+```
+
+### Node
+
+We also release the package to npm [@a11ywatch/crawler](https://www.npmjs.com/package/@a11ywatch/crawler).
+
+```sh
+npm i @a11ywatch/crawler
+```
+
+After import at the top of your project to start the gRPC server or run node directly against the module.
+
+```ts
+import "@a11ywatch/crawler";
+```
+
+## About
+
+This crawler is optimized for reduced latency and performance as it can handle over 10,000 pages within seconds.
+In order to receive the links found for the crawler you need to add the [`website.proto`](./proto/website.proto) to your server.
+This is required since every request spawns a thread. Isolating the context drastically improves performance (preventing shared resources / communication ).
+
+## Help
+
+If you need help implementing the gRPC server to receive the pages or links when found check out the [gRPC node example](https://github.com/A11yWatch/a11ywatch-core/blob/main/src/proto/website-server.ts) for a starting point .
+
+## TODO
+
+1. Allow gRPC server port setting or change to direct url:port combo.
 
 ## LICENSE
 

@@ -5,6 +5,7 @@ pub mod health {
     tonic::include_proto!("health");
 }
 
+/// Health check client to see if server is alive.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = HealthCheckClient::connect("http://127.0.0.1:50055").await?;
