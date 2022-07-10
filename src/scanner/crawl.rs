@@ -1,6 +1,7 @@
 use crate::rpc::client::monitor_page_async;
 use crate::rpc::client::website::ScanParams;
 use crate::packages::spider::website::Website;
+use ua_generator::ua::spoof_ua;
 
 /// crawl all pages and gather links sending request back once finished. Built for CI usage.
 pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agent: &String, subdomains: bool, tld: bool) -> Result<(), core::fmt::Error> {
@@ -11,6 +12,7 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
     website.configuration.delay = 18;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
+    website.configuration.user_agent = spoof_ua();
 
     if !agent.is_empty() {
         website.configuration.user_agent = agent.into();

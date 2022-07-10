@@ -1,5 +1,6 @@
 extern crate tonic;
 extern crate tokio;
+extern crate ua_generator;
 
 // packages mainly for spider
 extern crate num_cpus;
