@@ -55,6 +55,8 @@ import "@a11ywatch/crawler";
 
 ## About
 
+![Rough architecture diagram of choices on how it performs fast and efficient. A primary thread is spawned for a request that connects to the gRPC server. The links found are handled via pools to parallel process the pages.](https://raw.githubusercontent.com/A11yWatch/Project-Screenshots/master/grpc-rust-crawler.png?raw=true)
+
 This crawler is optimized for reduced latency and performance as it can handle over 10,000 pages within seconds.
 In order to receive the links found for the crawler you need to add the [`website.proto`](./proto/website.proto) to your server.
 This is required since every request spawns a thread. Isolating the context drastically improves performance (preventing shared resources / communication ).
