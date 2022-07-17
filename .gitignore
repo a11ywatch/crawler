@@ -1,9 +1,10 @@
+.DS_STORE
 /target
 **/*.rs.bk
 .env
-.DS_STORE
 
 # tmp store move to CI and rust generation
 pre-install.js
-package.json
 start.js
+uninstall.js
+package.json
