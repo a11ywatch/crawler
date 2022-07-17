@@ -8,7 +8,6 @@ use tonic::transport::Channel;
 pub use website::{website_service_client::WebsiteServiceClient, ScanParams};
 
 use tokio;
-use tokio::signal;
 use crate::spider::utils::{log};
 
 /// get the gRPC client address for the API server.
@@ -65,7 +64,7 @@ pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
     link: String,
     user_id: u32
-) {
+) -> bool {
     let page = ScanParams {
         pages: [link.clone()].to_vec(),
         user_id,
@@ -85,9 +84,8 @@ pub async fn monitor(
     }
 
     // shutdown the thread
-    if perform_shutdown {
-        signal::ctrl_c().await.unwrap();
-    }
+    !perform_shutdown
+    
 }
 
 

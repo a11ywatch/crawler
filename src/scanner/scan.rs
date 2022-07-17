@@ -15,10 +15,11 @@ pub async fn scan(domain: &String, user_id: u32, respect_robots_txt: bool, agent
     website.configuration.delay = 14; // delay for sake of not blowing up client and crawl blockings.
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.user_agent = spoof_ua();
 
-    if !agent.is_empty() {
-        website.configuration.user_agent = agent.into();
+    website.configuration.user_agent = if !agent.is_empty() {
+        agent.into()
+    } else {
+        spoof_ua()
     };
 
     let web_site = ScanParams {

@@ -204,6 +204,8 @@ impl<'a> Website<'a> {
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
 
+        let mut crawl_valid = true;
+
         // crawl while links exists
         while !self.links.is_empty() {
             let (tx, rx): (Sender<Message>, Receiver<Message>) = channel();
@@ -223,29 +225,39 @@ impl<'a> Website<'a> {
                 let tx = tx.clone();
                 let cx = client.clone();
 
-                monitor(&mut rpcx, thread_link, user_id).await;
+                let can_process = monitor(&mut rpcx, thread_link, user_id).await;
 
-                pool.spawn(move || {
-                    if delay_enabled {
-                        tokio_sleep(&Duration::from_millis(delay));
-                    }
-
-                    let page = Page::new(&link, &cx);
-                    let links = page.links(subdomains, tld);
-
-                    tx.send(links).unwrap();
-                });
+                // can continue processing the crawls
+                if can_process {
+                    pool.spawn(move || {
+                        if delay_enabled {
+                            tokio_sleep(&Duration::from_millis(delay));
+                        }
+    
+                        let page = Page::new(&link, &cx);
+                        let links = page.links(subdomains, tld);
+    
+                        tx.send(links).unwrap();
+                    });
+                } else {
+                    crawl_valid = false;
+                    break;
+                }
             }
 
             drop(tx);
 
-            let mut new_links: HashSet<String> = HashSet::new();
+            if crawl_valid {
+                let mut new_links: HashSet<String> = HashSet::new();
 
-            rx.into_iter().for_each(|links| {
-                new_links.extend(links);
-            });
-
-            self.links = &new_links - &self.links_visited;
+                rx.into_iter().for_each(|links| {
+                    new_links.extend(links);
+                });
+    
+                self.links = &new_links - &self.links_visited;
+            } else {
+                self.links.clear();
+            }
         }
 
     }

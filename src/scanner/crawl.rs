@@ -12,10 +12,11 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
     website.configuration.delay = 18;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.user_agent = spoof_ua();
 
-    if !agent.is_empty() {
-        website.configuration.user_agent = agent.into();
+    website.configuration.user_agent = if !agent.is_empty() {
+        agent.into()
+    } else {
+        spoof_ua()
     };
 
     website.crawl();

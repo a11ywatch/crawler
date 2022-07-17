@@ -2,13 +2,15 @@ syntax = "proto3";
 
 package website;
 
+// Central API that manages your website between starting single and multi page scans. Default port starts on [50051].
 service WebsiteService {
    rpc ScanStart (ScanParams) returns (Empty) {} // track when scan starts.
    rpc ScanEnd (ScanParams) returns (Empty) {} // tracks when scan completes.
-   rpc Scan (ScanParams) returns (Empty) {} // non stream scanning allowing for full track up time for keep alive cost [TODO: look into removal for full stream].
+   rpc Scan (ScanParams) returns (Empty) {} // non stream scanning allowing for full track up time for keep alive cost.
    rpc ScanStream (ScanParams) returns (stream ScanStreamResponse) {} // stream the scan request and simply return.
 }
 
+// params to send when scanning pages.
 message ScanParams {
    repeated string pages = 1; // list of pages returned.
    string domain = 2; // the url base of the crawl.
@@ -16,10 +18,10 @@ message ScanParams {
    bool full = 4; // full crawl awaiting all links.
 }
 
-// send nothing
+// send nothing mainly for triggering events.
 message Empty {}
 
 // send streamed response
 message ScanStreamResponse {
-   string message = 1; // message of the scan success.
+   string message = 1; // message of the scan success or if should terminate.
 }

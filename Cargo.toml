@@ -1,7 +1,7 @@
 [package]
 name = "website_crawler"
-version = "0.4.0"
-authors = ["jeffreymendez <jeff@a11ywatch.com>"]
+version = "0.4.6"
+authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC web crawler that's very fast"
 license = "MIT"
@@ -11,7 +11,7 @@ keywords = ["crawler", "web-crawler", "spider", "web-indexer", "site-map-generat
 categories = ["accessibility", "asynchronous"]
 
 [dependencies]
-tokio = { version = "^1.17.0", features = [ "rt-multi-thread", "net", "macros", "sync", "time", "signal" ] }
+tokio = { version = "^1.17.0", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
 tonic = "0.7"
 prost = "0.10"
 num_cpus = "1.13.0"

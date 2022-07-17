@@ -1,6 +1,6 @@
 # crawler
 
-[![A11yWatch](https://circleci.com/gh/A11yWatch/crawler.svg?style=svg)](https://circleci.com/gh/A11yWatch/crawler)
+[![A11yWatch](https://circleci.com/gh/a11ywatch/crawler.svg?style=svg)](https://circleci.com/gh/a11ywatch/crawler)
 
 A gRPC web indexer turbo charged for performance.
 
