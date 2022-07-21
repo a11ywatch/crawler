@@ -9,7 +9,8 @@ A gRPC web indexer turbo charged for performance.
 Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or Docker.
 
 This project requires that you start up another gRPC server on port `50051` following the [proto spec](https://github.com/A11yWatch/crawler/blob/main/proto/website.proto).
-The user agent is spoofed on each crawl to a random agent.
+
+The user agent is spoofed on each crawl to a random agent and the indexer extends [spider](https://github.com/madeindjs/spider) as the base.
 
 1. `cargo run` or `docker compose up`
 
