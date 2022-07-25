@@ -14,10 +14,10 @@ pub async fn crawl(domain: &String, user_id: u32, respect_robots_txt: bool, agen
     website.configuration.tld = tld;
 
     website.configuration.user_agent = if !agent.is_empty() {
-        agent.into()
+        agent
     } else {
         spoof_ua()
-    };
+    }.into();
 
     website.crawl();
 
