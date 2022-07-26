@@ -9,7 +9,7 @@ use rayon::ThreadPoolBuilder;
 use reqwest::blocking::Client;
 use reqwest::header;
 use reqwest::header::CONNECTION;
-use robotparser_fork::RobotFileParser;
+use super::robotparser::RobotFileParser;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 use tokio;
@@ -83,10 +83,10 @@ impl<'a> Website<'a> {
     }
 
     /// configure the robots parser on initial crawl attempt and run
-    pub fn configure_robots_parser(&mut self) {
+    pub fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt && self.robot_file_parser.mtime() == 0 {
             self.robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
-            self.robot_file_parser.read();
+            self.robot_file_parser.read(client);
             self.configuration.delay = self
                 .robot_file_parser
                 .get_crawl_delay(&self.robot_file_parser.user_agent) // returns the crawl delay in seconds
@@ -96,13 +96,13 @@ impl<'a> Website<'a> {
     }
 
     /// configure http client
-    fn configure_http_client(&mut self, user_agent: Option<String>) -> Client {
+    fn configure_http_client(&mut self) -> Client {
         let mut headers = header::HeaderMap::new();
         headers.insert(CONNECTION, header::HeaderValue::from_static("keep-alive"));
 
         Client::builder()
             .default_headers(headers)
-            .user_agent(user_agent.unwrap_or(self.configuration.user_agent.to_owned()))
+            .user_agent(&self.configuration.user_agent)
             .build()
             .expect("Failed building client.")
     }
@@ -116,9 +116,9 @@ impl<'a> Website<'a> {
     }
 
     /// setup config for crawl
-    fn setup(&mut self) -> Client {
-        self.configure_robots_parser();
-        let client = self.configure_http_client(None);
+    pub fn setup(&mut self) -> Client {
+        let client = self.configure_http_client();
+        self.configure_robots_parser(&client);
 
         client
     }
@@ -483,17 +483,6 @@ fn not_crawl_blacklist() {
     );
 }
 
-#[test]
-#[cfg(feature = "regex")]
-fn not_crawl_blacklist_regex() {
-    let mut website: Website = Website::new("https://choosealicense.com");
-    website
-        .configuration
-        .blacklist_url
-        .push("/choosealicense.com/".to_string());
-    website.crawl();
-    assert_eq!(website.links_visited.len(), 0);
-}
 
 #[test]
 fn test_respect_robots_txt() {
@@ -506,7 +495,9 @@ fn test_respect_robots_txt() {
     let mut website_second: Website = Website::new("https://www.mongodb.com");
     website_second.configuration.respect_robots_txt = true;
     website_second.configuration.user_agent = "bingbot".into();
-    website_second.configure_robots_parser();
+    let website_second_client = website_second.setup();
+
+    website_second.configure_robots_parser(&website_second_client);
     assert_eq!(
         website_second.configuration.user_agent,
         website_second.robot_file_parser.user_agent
@@ -516,7 +507,9 @@ fn test_respect_robots_txt() {
     // test crawl delay with wildcard agent [DOES not work when using set agent]
     let mut website_third: Website = Website::new("https://www.mongodb.com");
     website_third.configuration.respect_robots_txt = true;
-    website_third.configure_robots_parser();
+    let website_third_client = website_third.setup();
+
+    website_third.configure_robots_parser(&website_third_client);
 
     assert_eq!(website_third.configuration.delay, 10000); // should equal 10 seconds in ms
 }

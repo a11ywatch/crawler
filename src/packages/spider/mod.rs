@@ -35,25 +35,9 @@ pub mod page;
 pub mod utils;
 /// A website to crawl.
 pub mod website;
+/// Robot parser.
+pub mod robotparser;
 
-#[cfg(feature = "regex")]
-/// Black list checking url exist with Regex.
-pub mod black_list {
-    use regex::Regex;
-    /// check if link exist in blacklists with regex.
-    pub fn contains(blacklist_url: &Vec<String>, link: &String) -> bool {
-        for pattern in blacklist_url {
-            let re = Regex::new(pattern).unwrap();
-            if re.is_match(link) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-}
-
-#[cfg(not(feature = "regex"))]
 /// Black list checking url exist.
 pub mod black_list {
     /// check if link exist in blacklists.
