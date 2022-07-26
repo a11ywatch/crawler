@@ -3,24 +3,20 @@ pub mod website {
 }
 
 use std::env::var;
+
 use tonic::transport::Channel;
 
+use crate::spider::utils::log;
 pub use website::{website_service_client::WebsiteServiceClient, ScanParams};
-
-use tokio;
-use crate::spider::utils::{log};
-
-/// get the gRPC client address for the API server.
-pub fn get_client_address() -> String {
-    format!(
-        "http://{}",
-        var("GRPC_HOST_API").unwrap_or("[::1]:50051".to_string())
-    )
-}
 
 /// create gRPC client from the API server.
 pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::transport::Error> {
-    let client = WebsiteServiceClient::connect(get_client_address()).await?;
+    lazy_static! {
+        static ref CLIENT: String = format!(
+            "http://{}", var("GRPC_HOST_API").unwrap_or("[::1]:50051".to_string()));
+    };
+
+    let client = WebsiteServiceClient::connect(CLIENT.as_ref()).await?;
 
     Ok(client)
 }
@@ -63,7 +59,7 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
 pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
     link: String,
-    user_id: u32
+    user_id: u32,
 ) -> bool {
     let page = ScanParams {
         pages: [link.clone()].to_vec(),
@@ -71,9 +67,8 @@ pub async fn monitor(
         ..Default::default()
     };
     let request = tonic::Request::new(page);
-
     let mut stream = client.scan_stream(request).await.unwrap().into_inner();
-    
+
     let mut perform_shutdown = false;
 
     while let Some(res) = stream.message().await.unwrap() {
@@ -85,33 +80,4 @@ pub async fn monitor(
 
     // shutdown the thread
     !perform_shutdown
-    
-}
-
-
-/// make request to the api server to perform scan action to gather results.
-pub async fn monitor_link_async(link: &String) -> Result<(), tonic::Status> {
-    let mut client = create_client().await.unwrap();
-
-    let page = ScanParams {
-        pages: [link.to_string()].to_vec(),
-        ..Default::default()
-    };
-
-    let request = tonic::Request::new(page);
-
-    client.scan(request).await?;
-
-    Ok(())
-}
-
-#[tokio::main(flavor = "current_thread")]
-/// callback to run on website link find
-pub async fn monitor_page(link: String) -> String {
-    let link_target = link.clone();
-    
-    monitor_link_async(&link_target).await
-        .unwrap_or_else(|e| println!("monitor task error: {:?}", e));
-
-    link
 }

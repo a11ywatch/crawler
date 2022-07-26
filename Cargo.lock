@@ -3010,7 +3010,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.4.7"
+version = "0.4.10"
 dependencies = [
  "cc",
  "failure_derive",

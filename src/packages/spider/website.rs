@@ -1,20 +1,20 @@
 use super::black_list::contains;
 use super::configuration::Configuration;
 use super::page::Page;
-use super::utils::{log};
-use reqwest::blocking::{Client};
+use super::utils::log;
+use crate::rpc::client::{monitor, WebsiteServiceClient};
+use hashbrown::HashSet;
 use rayon::ThreadPool;
 use rayon::ThreadPoolBuilder;
-use robotparser_fork::RobotFileParser;
-use hashbrown::HashSet;
-use std::{time::{Duration}};
-use std::sync::mpsc::{channel, Sender, Receiver};
-use reqwest::header::CONNECTION;
+use reqwest::blocking::Client;
 use reqwest::header;
+use reqwest::header::CONNECTION;
+use robotparser_fork::RobotFileParser;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::time::Duration;
+use tokio;
 use tokio::time::sleep;
 use tonic::transport::Channel;
-use crate::rpc::client::{WebsiteServiceClient, monitor};
-use tokio;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -62,10 +62,13 @@ impl<'a> Website<'a> {
 
     /// page getter
     pub fn get_pages(&self) -> Vec<Page> {
-        if !self.pages.is_empty(){
+        if !self.pages.is_empty() {
             self.pages.clone()
         } else {
-            self.links_visited.iter().map(|l| Page::build(l, "")).collect()
+            self.links_visited
+                .iter()
+                .map(|l| Page::build(l, ""))
+                .collect()
         }
     }
 
@@ -82,7 +85,7 @@ impl<'a> Website<'a> {
     /// configure the robots parser on initial crawl attempt and run
     pub fn configure_robots_parser(&mut self) {
         if self.configuration.respect_robots_txt && self.robot_file_parser.mtime() == 0 {
-            self.robot_file_parser.user_agent = self.configuration.user_agent.to_string();
+            self.robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
             self.robot_file_parser.read();
             self.configuration.delay = self
                 .robot_file_parser
@@ -99,7 +102,7 @@ impl<'a> Website<'a> {
 
         Client::builder()
             .default_headers(headers)
-            .user_agent(user_agent.unwrap_or(self.configuration.user_agent.to_string()))
+            .user_agent(user_agent.unwrap_or(self.configuration.user_agent.to_owned()))
             .build()
             .expect("Failed building client.")
     }
@@ -119,7 +122,7 @@ impl<'a> Website<'a> {
 
         client
     }
-    
+
     /// Start to crawl website with async parallelization
     pub fn crawl(&mut self) {
         let client = self.setup();
@@ -127,10 +130,15 @@ impl<'a> Website<'a> {
     }
 
     /// Start to crawl website with async parallelization gRPC
-    pub async fn crawl_grpc(&mut self, rpc_client: &mut WebsiteServiceClient<Channel>, user_id: u32) {
+    pub async fn crawl_grpc(
+        &mut self,
+        rpc_client: &mut WebsiteServiceClient<Channel>,
+        user_id: u32,
+    ) {
         let client = self.setup();
 
-        self.crawl_concurrent_rpc(&client, rpc_client, user_id).await;
+        self.crawl_concurrent_rpc(&client, rpc_client, user_id)
+            .await;
     }
 
     /// Start to scrape website with async parallelization
@@ -175,7 +183,7 @@ impl<'a> Website<'a> {
                     if delay_enabled {
                         tokio_sleep(&Duration::from_millis(delay));
                     }
-                    
+
                     let page = Page::new(&link, &cx);
                     let links = page.links(subdomains, tld);
 
@@ -196,7 +204,12 @@ impl<'a> Website<'a> {
     }
 
     /// Start to crawl website concurrently using gRPC callback
-    async fn crawl_concurrent_rpc(&mut self, client: &Client, grpc_client: &mut WebsiteServiceClient<Channel>, user_id: u32) {
+    async fn crawl_concurrent_rpc(
+        &mut self,
+        client: &Client,
+        grpc_client: &mut WebsiteServiceClient<Channel>,
+        user_id: u32,
+    ) {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
@@ -220,7 +233,7 @@ impl<'a> Website<'a> {
 
                 let thread_link = link.clone();
                 let mut rpcx = rpcx.clone().to_owned();
-                
+
                 let link = link.clone();
                 let tx = tx.clone();
                 let cx = client.clone();
@@ -233,10 +246,10 @@ impl<'a> Website<'a> {
                         if delay_enabled {
                             tokio_sleep(&Duration::from_millis(delay));
                         }
-    
+
                         let page = Page::new(&link, &cx);
                         let links = page.links(subdomains, tld);
-    
+
                         tx.send(links).unwrap();
                     });
                 } else {
@@ -253,13 +266,12 @@ impl<'a> Website<'a> {
                 rx.into_iter().for_each(|links| {
                     new_links.extend(links);
                 });
-    
+
                 self.links = &new_links - &self.links_visited;
             } else {
                 self.links.clear();
             }
         }
-
     }
 
     /// Start to crawl website sequential
@@ -346,7 +358,7 @@ impl<'a> Website<'a> {
             self.links = &new_links - &self.links_visited;
         }
     }
-    
+
     /// return `true` if URL:
     ///
     /// - is not already crawled
@@ -366,7 +378,6 @@ impl<'a> Website<'a> {
         true
     }
 
-
     /// return `true` if URL:
     ///
     /// - is not forbidden in robot.txt file (if parameter is defined)  
@@ -381,7 +392,7 @@ impl<'a> Drop for Website<'a> {
 
 /// blocking sleep keeping thread alive
 #[tokio::main]
-async fn tokio_sleep(delay: &Duration){
+async fn tokio_sleep(delay: &Duration) {
     sleep(*delay).await;
 }
 
@@ -410,10 +421,7 @@ fn scrape() {
         website.links_visited
     );
 
-    assert_eq!(
-        website.get_pages()[0].get_html().is_empty(),
-        false
-    );  
+    assert_eq!(website.get_pages()[0].get_html().is_empty(), false);
 }
 
 #[test]
@@ -445,7 +453,7 @@ fn crawl_invalid() {
 fn crawl_link_callback() {
     let mut website: Website = Website::new("https://choosealicense.com");
     website.on_link_find_callback = |s| {
-       log("callback link target: {}", &s);
+        log("callback link target: {}", &s);
         s
     };
     website.crawl();

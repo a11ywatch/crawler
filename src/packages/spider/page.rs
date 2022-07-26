@@ -1,8 +1,8 @@
+use super::utils::fetch_page_html;
+use hashbrown::HashSet;
+use reqwest::blocking::Client;
 use scraper::{Html, Selector};
 use url::Url;
-use reqwest::blocking::{Client};
-use hashbrown::HashSet;
-use super::utils::{fetch_page_html};
 
 /// Represent a page visited. This page contains HTML scraped with [scraper](https://crates.io/crates/scraper).
 #[derive(Debug, Clone)]
@@ -12,12 +12,12 @@ pub struct Page {
     /// HTML parsed with [scraper](https://crates.io/crates/scraper) lib. The html is not stored and only used to parse links.
     html: String,
     /// Base absolute url for page.
-    base: Url
+    base: Url,
 }
 
 /// Macro to get all media selectors that should be ignored for link gathering.
 macro_rules! media_ignore_selector {
-    () => ( 
+    () => (
         concat!(
         r#":not([href$=".ico"]):not([href$=".png"]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".svg"]):not([href$=".webp"]):not([href$=".gif"]):not([href$=".pdf"]):not([href$=".tiff"])"#, // images
         r#":not([href$=".wav"]):not([href$=".mp3"]):not([href$=".mp4"]):not([href$=".ogg"]):not([href$=".webm"])"#, // videos
@@ -47,7 +47,7 @@ impl Page {
         Self {
             url: url.to_string(),
             html: html.to_string(),
-            base: Url::parse(&url).expect("Invalid page URL")
+            base: Url::parse(&url).expect("Invalid page URL"),
         }
     }
 
@@ -90,7 +90,10 @@ impl Page {
             let scheme = self.base.scheme();
             // . extension
             let tlds = if tld {
-                format!(r#"a[href^="{scheme}://{dname}"]{},"#, *MEDIA_IGNORE_SELECTOR) // match everything that follows the base.
+                format!(
+                    r#"a[href^="{scheme}://{dname}"]{},"#,
+                    *MEDIA_IGNORE_SELECTOR
+                ) // match everything that follows the base.
             } else {
                 "".to_string()
             };
@@ -98,40 +101,31 @@ impl Page {
             let absolute_selector = &if subdomains {
                 format!(
                     r#"a[href^="{url}"]{},{tlds}a[href^="{scheme}"][href*=".{dname}."]{}"#,
-                    *MEDIA_IGNORE_SELECTOR,
-                    *MEDIA_IGNORE_SELECTOR,
+                    *MEDIA_IGNORE_SELECTOR, *MEDIA_IGNORE_SELECTOR,
                 )
             } else {
-                format!(
-                    r#"a[href^="{url}"]{}"#,
-                    *MEDIA_IGNORE_SELECTOR,
-                )
+                format!(r#"a[href^="{url}"]{}"#, *MEDIA_IGNORE_SELECTOR,)
             };
             let static_html_selector = &format!(
                 r#"{} {}, {absolute_selector} {}"#,
-                *MEDIA_SELECTOR_RELATIVE,
-                *MEDIA_SELECTOR_STATIC,
-                *MEDIA_SELECTOR_STATIC
+                *MEDIA_SELECTOR_RELATIVE, *MEDIA_SELECTOR_STATIC, *MEDIA_SELECTOR_STATIC
             );
             Selector::parse(&format!(
                 "{tlds}{},{absolute_selector},{static_html_selector}",
                 *MEDIA_SELECTOR_RELATIVE
-            )).unwrap()
+            ))
+            .unwrap()
         } else {
-            let absolute_selector = format!(
-                r#"a[href^="{url}"]{}"#,
-                *MEDIA_IGNORE_SELECTOR,
-            );
+            let absolute_selector = format!(r#"a[href^="{url}"]{}"#, *MEDIA_IGNORE_SELECTOR,);
             let static_html_selector = &format!(
                 r#"{} {}, {absolute_selector} {}"#,
-                *MEDIA_SELECTOR_RELATIVE,
-                *MEDIA_SELECTOR_STATIC,
-                *MEDIA_SELECTOR_STATIC
+                *MEDIA_SELECTOR_RELATIVE, *MEDIA_SELECTOR_STATIC, *MEDIA_SELECTOR_STATIC
             );
             Selector::parse(&format!(
                 "{},{absolute_selector},{static_html_selector}",
                 *MEDIA_SELECTOR_RELATIVE
-            )).unwrap()
+            ))
+            .unwrap()
         }
     }
 
@@ -144,24 +138,36 @@ impl Page {
         if subdomains {
             let base_domain = self.domain_name(&self.base);
 
-            anchors.filter_map(|a| {
-                let abs = self.abs_path(a.value().attr("href").unwrap_or_default()).to_string();
-                let url_domain = self.domain_name(&Url::parse(&abs).unwrap());
+            anchors
+                .filter_map(|a| {
+                    let abs = self
+                        .abs_path(a.value().attr("href").unwrap_or_default())
+                        .to_string();
+                    let url_domain = self.domain_name(&Url::parse(&abs).unwrap());
 
-                if base_domain == url_domain  {
-                    Some(abs)
-                } else {
-                    None
-                }
-            }).collect()
+                    if base_domain == url_domain {
+                        Some(abs)
+                    } else {
+                        None
+                    }
+                })
+                .collect()
         } else {
-            anchors.map(|a| self.abs_path(a.value().attr("href").unwrap_or("")).to_string()).collect()
+            anchors
+                .map(|a| {
+                    self.abs_path(a.value().attr("href").unwrap_or(""))
+                        .to_string()
+                })
+                .collect()
         }
     }
 
     /// Convert a URL to its absolute path without any fragments or params.
     fn abs_path(&self, href: &str) -> Url {
-        let mut joined = self.base.join(href).unwrap_or(Url::parse(&self.url.to_string()).expect("Invalid page URL"));
+        let mut joined = self
+            .base
+            .join(href)
+            .unwrap_or(Url::parse(&self.url.to_string()).expect("Invalid page URL"));
 
         joined.set_fragment(None);
 
@@ -180,8 +186,7 @@ fn parse_links() {
     let links = page.links(false, false);
 
     assert!(
-        links
-            .contains(&"https://choosealicense.com/about/".to_string()),
+        links.contains(&"https://choosealicense.com/about/".to_string()),
         "Could not find {}. Theses URLs was found {:?}",
         page.url,
         &links
