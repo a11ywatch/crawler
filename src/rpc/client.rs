@@ -13,7 +13,9 @@ pub use website::{website_service_client::WebsiteServiceClient, ScanParams};
 pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::transport::Error> {
     lazy_static! {
         static ref CLIENT: String = format!(
-            "http://{}", var("GRPC_HOST_API").unwrap_or("[::1]:50051".to_string()));
+            "http://{}",
+            var("GRPC_HOST_API").unwrap_or("[::1]:50051".to_string())
+        );
     };
 
     let client = WebsiteServiceClient::connect(CLIENT.as_ref()).await?;

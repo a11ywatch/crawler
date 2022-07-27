@@ -40,7 +40,7 @@ impl Configuration {
         } else {
             logical_cpus
         } * 4;
-        
+
         Self {
             delay: 250,
             concurrency,

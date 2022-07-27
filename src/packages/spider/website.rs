@@ -1,6 +1,7 @@
 use super::black_list::contains;
 use super::configuration::Configuration;
 use super::page::Page;
+use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
@@ -9,7 +10,6 @@ use rayon::ThreadPoolBuilder;
 use reqwest::blocking::Client;
 use reqwest::header;
 use reqwest::header::CONNECTION;
-use super::robotparser::RobotFileParser;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 use tokio;
@@ -482,7 +482,6 @@ fn not_crawl_blacklist() {
         website.links_visited
     );
 }
-
 
 #[test]
 fn test_respect_robots_txt() {

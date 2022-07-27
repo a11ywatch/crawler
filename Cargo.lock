@@ -2147,7 +2147,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.4.12"
+version = "0.4.13"
 dependencies = [
  "cc",
  "failure_derive",

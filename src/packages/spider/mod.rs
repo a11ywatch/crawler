@@ -31,12 +31,12 @@
 pub mod configuration;
 /// A page scraped.
 pub mod page;
+/// Robot parser.
+pub mod robotparser;
 /// Application utils.
 pub mod utils;
 /// A website to crawl.
 pub mod website;
-/// Robot parser.
-pub mod robotparser;
 
 /// Black list checking url exist.
 pub mod black_list {
