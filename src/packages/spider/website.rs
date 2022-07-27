@@ -103,6 +103,8 @@ impl<'a> Website<'a> {
         Client::builder()
             .default_headers(headers)
             .user_agent(&self.configuration.user_agent)
+            .brotli(true)
+            .cookie_store(true)
             .build()
             .expect("Failed building client.")
     }
