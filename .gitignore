@@ -2,9 +2,10 @@
 /target
 **/*.rs.bk
 .env
-
+node_modules
 # tmp store move to CI and rust generation
 pre-install.js
 start.js
 uninstall.js
 package.json
+package-lock.json

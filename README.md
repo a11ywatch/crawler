@@ -12,6 +12,8 @@ This project requires that you start up another gRPC server on port `50051` foll
 
 The user agent is spoofed on each crawl to a random agent and the indexer extends [spider](https://github.com/madeindjs/spider) as the base.
 
+Make sure to have `npm` installed in order to build the `proto` defs from `@a11ywatch/protos`.
+
 1. `cargo run` or `docker compose up`
 
 ## Installation
