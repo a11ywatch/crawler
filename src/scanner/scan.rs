@@ -22,29 +22,27 @@ pub async fn scan(
     website.configuration.delay = 14; // delay for sake of not blowing up client and crawl blockings.
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-
     website.configuration.user_agent = if !agent.is_empty() { agent } else { spoof_ua() }.into();
 
-    let web_site = ScanParams {
+    // send scan start tracking user for following request
+    monitor_page_start(&mut client, ScanParams {
         pages: [].to_vec(),
         domain: domain.into(),
         user_id,
         full: false,
-    };
-
-    let mut start_client = client.clone();
-
-    // send scan start tracking user for following request
-    monitor_page_start(&mut start_client, &web_site)
+    })
         .await
         .unwrap_or_else(|e| println!("{} - crawl start failed.", e));
-
-    let mut end_client = client.clone();
 
     website.crawl_grpc(&mut client, user_id).await;
 
     // send scan complete
-    monitor_page_complete(&mut end_client, &web_site)
+    monitor_page_complete(&mut client, ScanParams {
+        pages: [].to_vec(),
+        domain: domain.into(),
+        user_id,
+        full: false,
+    })
         .await
         .unwrap_or_else(|e| println!("{} - crawl completed failed.", e));
 

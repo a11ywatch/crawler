@@ -56,7 +56,7 @@ impl<'a> Website<'a> {
             robot_file_parser: RobotFileParser::new(&format!("{}/robots.txt", domain)), // TODO: lazy establish
             links: HashSet::from([format!("{}/", domain)]),
             on_link_find_callback: |s| s,
-            domain: domain.to_owned(),
+            domain: domain.to_string(),
         }
     }
 
@@ -85,7 +85,7 @@ impl<'a> Website<'a> {
     /// configure the robots parser on initial crawl attempt and run
     pub fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt && self.robot_file_parser.mtime() == 0 {
-            self.robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
+            self.robot_file_parser.user_agent = self.configuration.user_agent.to_string();
             self.robot_file_parser.read(client);
             self.configuration.delay = self
                 .robot_file_parser
@@ -215,7 +215,7 @@ impl<'a> Website<'a> {
         let pool = self.create_thread_pool();
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
-        let rpcx = grpc_client.clone().to_owned();
+        let rpcx = grpc_client.clone();
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
 

@@ -26,9 +26,9 @@ pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::tra
 /// request to the API server that scan has started.
 pub async fn monitor_page_start(
     client: &mut WebsiteServiceClient<Channel>,
-    page: &ScanParams,
+    page: ScanParams,
 ) -> Result<(), tonic::Status> {
-    let request = tonic::Request::new(page.to_owned());
+    let request = tonic::Request::new(page);
 
     client.scan_start(request).await?;
 
@@ -38,9 +38,9 @@ pub async fn monitor_page_start(
 /// request to the API server that scan has finished.
 pub async fn monitor_page_complete(
     client: &mut WebsiteServiceClient<Channel>,
-    page: &ScanParams,
+    page: ScanParams,
 ) -> Result<(), tonic::Status> {
-    let request = tonic::Request::new(page.to_owned());
+    let request = tonic::Request::new(page);
 
     client.scan_end(request).await?;
 

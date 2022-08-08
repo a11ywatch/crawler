@@ -81,8 +81,6 @@ pub struct RobotFileParser<'a> {
     allow_all: Cell<bool>,
     /// Url of the website
     url: Url,
-    /// Domain Hostname
-    host: String,
     /// Domain url path
     path: String,
     /// Time last checked robots.txt file
@@ -156,7 +154,7 @@ impl<'a> Entry<'a> {
     /// Add to user agent list
     fn push_useragent(&self, useragent: &str) {
         let mut useragents = self.useragents.borrow_mut();
-        useragents.push(useragent.to_lowercase().to_owned());
+        useragents.push(useragent.to_lowercase());
     }
 
     /// Add rule to list
@@ -168,7 +166,7 @@ impl<'a> Entry<'a> {
     /// Determine if user agent exist
     fn has_useragent(&self, useragent: &str) -> bool {
         let useragents = self.useragents.borrow();
-        useragents.contains(&useragent.to_owned())
+        useragents.contains(&useragent.to_string())
     }
 
     /// Is the user-agent list empty?
@@ -221,14 +219,14 @@ impl<'a> RobotFileParser<'a> {
     /// Establish a new robotparser for a website domain
     pub fn new<T: AsRef<str>>(url: T) -> RobotFileParser<'a> {
         let parsed_url = Url::parse(url.as_ref()).unwrap();
+        
         RobotFileParser {
             entries: RefCell::new(vec![]),
             default_entry: RefCell::new(Entry::new()),
             disallow_all: Cell::new(false),
             allow_all: Cell::new(false),
             url: parsed_url.clone(),
-            host: parsed_url.host_str().unwrap().to_owned(),
-            path: parsed_url.path().to_owned(),
+            path: parsed_url.path().to_string(),
             last_checked: Cell::new(0i64),
             user_agent: String::from("robotparser-rs"),
         }
@@ -255,16 +253,15 @@ impl<'a> RobotFileParser<'a> {
     /// Sets the URL referring to a robots.txt file.
     pub fn set_url<T: AsRef<str>>(&mut self, url: T) {
         let parsed_url = Url::parse(url.as_ref()).unwrap();
-        self.url = parsed_url.clone();
-        self.host = parsed_url.host_str().unwrap().to_owned();
-        self.path = parsed_url.path().to_owned();
+        self.path = parsed_url.path().to_string();
+        self.url = parsed_url;
         self.last_checked.set(0i64);
     }
 
     /// Reads the robots.txt URL and feeds it to the parser.
     pub fn read(&self, client: &Client) {
         let request = client.get(self.url.clone());
-        let request = request.header(USER_AGENT, self.user_agent.to_owned());
+        let request = request.header(USER_AGENT, self.user_agent.to_string());
         let mut res = match request.send() {
             Ok(res) => res,
             Err(_) => {
@@ -355,7 +352,7 @@ impl<'a> RobotFileParser<'a> {
             if parts.len() == 2 {
                 let part0 = parts[0].trim().to_lowercase();
                 let part1 = String::from_utf8(percent_decode(parts[1].trim().as_bytes()).collect())
-                    .unwrap_or("".to_owned());
+                    .unwrap_or("".to_string());
                 match part0 {
                     ref x if x.to_lowercase() == "user-agent" => {
                         if state == 2 {
@@ -442,10 +439,10 @@ impl<'a> RobotFileParser<'a> {
         // search for given user agent matches
         // the first match counts
         let decoded_url = String::from_utf8(percent_decode(url.trim().as_bytes()).collect())
-            .unwrap_or("".to_owned());
+            .unwrap_or("".to_string());
         let url_str = match decoded_url {
-            ref u if !u.is_empty() => u.to_owned(),
-            _ => "/".to_owned(),
+            ref u if !u.is_empty() => u,
+            _ => "/",
         };
         let entries = self.entries.borrow();
         for entry in &*entries {
