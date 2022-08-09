@@ -19,7 +19,6 @@ pub async fn crawl(
     website.configuration.delay = 18;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-
     website.configuration.user_agent = if !agent.is_empty() { agent } else { spoof_ua() }.into();
 
     website.crawl();

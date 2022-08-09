@@ -7,7 +7,9 @@ use std::env::var;
 use tonic::transport::Channel;
 
 use crate::spider::utils::log;
-pub use website::{website_service_client::WebsiteServiceClient, ScanParams};
+
+// gRPC client
+pub use website::{website_service_client::WebsiteServiceClient, ScanInitParams, ScanParams};
 
 /// create gRPC client from the API server.
 pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::transport::Error> {
@@ -26,7 +28,7 @@ pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::tra
 /// request to the API server that scan has started.
 pub async fn monitor_page_start(
     client: &mut WebsiteServiceClient<Channel>,
-    page: ScanParams,
+    page: ScanInitParams,
 ) -> Result<(), tonic::Status> {
     let request = tonic::Request::new(page);
 
@@ -38,7 +40,7 @@ pub async fn monitor_page_start(
 /// request to the API server that scan has finished.
 pub async fn monitor_page_complete(
     client: &mut WebsiteServiceClient<Channel>,
-    page: ScanParams,
+    page: ScanInitParams,
 ) -> Result<(), tonic::Status> {
     let request = tonic::Request::new(page);
 
@@ -60,24 +62,23 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
 /// run a accessibility scan waiting for results.
 pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
-    link: String,
+    link: &String,
     user_id: u32,
 ) -> bool {
-    let page = ScanParams {
-        pages: [link.clone()].to_vec(),
+    let request = tonic::Request::new(ScanParams {
+        pages: vec![link.clone()],
         user_id,
         ..Default::default()
-    };
-    let request = tonic::Request::new(page);
+    });
     let mut stream = client.scan_stream(request).await.unwrap().into_inner();
 
-    let mut perform_shutdown = false;
+    let mut perform_shutdown = false; // shutdown was performed on website
 
     while let Some(res) = stream.message().await.unwrap() {
         if res.message == "shutdown" {
             perform_shutdown = true;
         }
-        log("gRPC(stream): finished -", link.clone());
+        log("gRPC(stream): finished -", &link);
     }
 
     // shutdown the thread

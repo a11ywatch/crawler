@@ -1,9 +1,9 @@
 [package]
 name = "website_crawler"
-version = "0.4.19"
+version = "0.4.25"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
-description = "gRPC web crawler that's very fast"
+description = "gRPC web crawler that is very fast"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/A11yWatch/crawler"

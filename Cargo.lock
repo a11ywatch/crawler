@@ -2293,7 +2293,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.4.19"
+version = "0.4.25"
 dependencies = [
  "cc",
  "env_logger",

@@ -62,8 +62,6 @@ struct Entry<'a> {
     rulelines: RefCell<Vec<RuleLine<'a>>>,
     /// Time to wait in between crawls
     crawl_delay: Option<Duration>,
-    /// The sitemaps for the website
-    sitemaps: Vec<Url>,
     /// The request rate to respect
     req_rate: Option<RequestRate>,
 }
@@ -118,7 +116,6 @@ impl<'a> Entry<'a> {
             useragents: RefCell::new(vec![]),
             rulelines: RefCell::new(vec![]),
             crawl_delay: None,
-            sitemaps: Vec::new(),
             req_rate: None,
         }
     }
@@ -186,18 +183,6 @@ impl<'a> Entry<'a> {
         self.crawl_delay
     }
 
-    /// Add sitemap to list
-    fn add_sitemap(&mut self, url: &str) {
-        if let Ok(url) = Url::parse(url) {
-            self.sitemaps.push(url);
-        }
-    }
-
-    /// Determine sitemaps for website
-    fn get_sitemaps(&self) -> Vec<Url> {
-        self.sitemaps.clone()
-    }
-
     /// Establish request rates between robots.txt crawling sitemaps
     fn set_req_rate(&mut self, req_rate: RequestRate) {
         self.req_rate = Some(req_rate);
@@ -219,7 +204,7 @@ impl<'a> RobotFileParser<'a> {
     /// Establish a new robotparser for a website domain
     pub fn new<T: AsRef<str>>(url: T) -> RobotFileParser<'a> {
         let parsed_url = Url::parse(url.as_ref()).unwrap();
-        
+
         RobotFileParser {
             entries: RefCell::new(vec![]),
             default_entry: RefCell::new(Entry::new()),
@@ -389,7 +374,6 @@ impl<'a> RobotFileParser<'a> {
                     }
                     ref x if x.to_lowercase() == "sitemap" => {
                         if state != 0 {
-                            entry.add_sitemap(&part1);
                             state = 2;
                         }
                     }
@@ -483,21 +467,6 @@ impl<'a> RobotFileParser<'a> {
         }
 
         None
-    }
-
-    /// Returns the sitemaps for this user agent as a `Vec<Url>`.
-    pub fn get_sitemaps<T: AsRef<str>>(&self, useragent: T) -> Vec<Url> {
-        let useragent = useragent.as_ref();
-        if self.last_checked.get() == 0 {
-            return Vec::new();
-        }
-        let entries = self.entries.borrow();
-        for entry in &*entries {
-            if entry.applies_to(useragent) {
-                return entry.get_sitemaps();
-            }
-        }
-        vec![]
     }
 
     /// Returns the request rate for this user agent as a `RequestRate`, or None if not request rate is defined

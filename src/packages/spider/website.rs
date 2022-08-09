@@ -38,8 +38,6 @@ pub struct Website<'a> {
     links_visited: HashSet<String>,
     /// contains page visited
     pages: Vec<Page>,
-    /// callback when a link is found.
-    pub on_link_find_callback: fn(String) -> String,
     /// Robot.txt parser holder.
     robot_file_parser: RobotFileParser<'a>,
 }
@@ -55,7 +53,6 @@ impl<'a> Website<'a> {
             pages: Vec::new(),
             robot_file_parser: RobotFileParser::new(&format!("{}/robots.txt", domain)), // TODO: lazy establish
             links: HashSet::from([format!("{}/", domain)]),
-            on_link_find_callback: |s| s,
             domain: domain.to_string(),
         }
     }
@@ -143,20 +140,6 @@ impl<'a> Website<'a> {
             .await;
     }
 
-    /// Start to scrape website with async parallelization
-    pub fn scrape(&mut self) {
-        let client = self.setup();
-
-        self.scrape_concurrent(&client);
-    }
-
-    /// Start to crawl website in sync
-    pub fn crawl_sync(&mut self) {
-        let client = self.setup();
-
-        self.crawl_sequential(&client);
-    }
-
     /// Start to crawl website concurrently
     fn crawl_concurrent(&mut self, client: &Client) {
         let pool = self.create_thread_pool();
@@ -209,16 +192,17 @@ impl<'a> Website<'a> {
     async fn crawl_concurrent_rpc(
         &mut self,
         client: &Client,
-        grpc_client: &mut WebsiteServiceClient<Channel>,
+        rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
         let pool = self.create_thread_pool();
+        // crawl configuration
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
-        let rpcx = grpc_client.clone();
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
 
+        // determine if a crawl is active style
         let mut crawl_valid = true;
 
         // crawl while links exists
@@ -230,25 +214,22 @@ impl<'a> Website<'a> {
                     continue;
                 }
                 log("fetch", link);
-
+                // insiert visited link
                 self.links_visited.insert(link.into());
 
-                let thread_link = link.clone();
-                let mut rpcx = rpcx.clone().to_owned();
-
-                let link = link.clone();
-                let tx = tx.clone();
-                let cx = client.clone();
-
-                let can_process = monitor(&mut rpcx, thread_link, user_id).await;
+                let mut rpcx = rpcx.clone();
+                let can_process = monitor(&mut rpcx, &link, user_id).await;
 
                 // can continue processing the crawls
                 if can_process {
+                    let cx = client.clone();
+                    let link = link.clone();
+                    let tx = tx.clone();
+
                     pool.spawn(move || {
                         if delay_enabled {
                             tokio_sleep(&Duration::from_millis(delay));
                         }
-
                         let page = Page::new(&link, &cx);
                         let links = page.links(subdomains, tld);
 
@@ -273,91 +254,6 @@ impl<'a> Website<'a> {
             } else {
                 self.links.clear();
             }
-        }
-    }
-
-    /// Start to crawl website sequential
-    fn crawl_sequential(&mut self, client: &Client) {
-        let delay = self.configuration.delay;
-        let delay_enabled = delay > 0;
-        let on_link_find_callback = self.on_link_find_callback;
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
-
-        // crawl while links exists
-        while !self.links.is_empty() {
-            let mut new_links: HashSet<String> = HashSet::new();
-
-            for link in self.links.iter() {
-                if !self.is_allowed(link) {
-                    continue;
-                }
-                log("fetch", link);
-                self.links_visited.insert(link.into());
-                if delay_enabled {
-                    tokio_sleep(&Duration::from_millis(delay));
-                }
-
-                let link = link.clone();
-                let cx = client.clone();
-                let link_result = on_link_find_callback(link);
-                let page = Page::new(&link_result, &cx);
-                let links = page.links(subdomains, tld);
-
-                new_links.extend(links);
-            }
-
-            self.links = &new_links - &self.links_visited;
-        }
-    }
-
-    /// Start to scape website concurrently and store html
-    fn scrape_concurrent(&mut self, client: &Client) {
-        let pool = self.create_thread_pool();
-        let delay = self.configuration.delay;
-        let delay_enabled = delay > 0;
-        let on_link_find_callback = self.on_link_find_callback;
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
-
-        // crawl while links exists
-        while !self.links.is_empty() {
-            let (tx, rx): (Sender<Page>, Receiver<Page>) = channel();
-
-            for link in self.links.iter() {
-                if !self.is_allowed(link) {
-                    continue;
-                }
-                log("fetch", link);
-
-                self.links_visited.insert(link.into());
-
-                let link = link.clone();
-                let tx = tx.clone();
-                let cx = client.clone();
-
-                pool.spawn(move || {
-                    if delay_enabled {
-                        tokio_sleep(&Duration::from_millis(delay));
-                    }
-                    let link_result = on_link_find_callback(link);
-                    let page = Page::new(&link_result, &cx);
-
-                    tx.send(page).unwrap();
-                });
-            }
-
-            drop(tx);
-
-            let mut new_links: HashSet<String> = HashSet::new();
-
-            rx.into_iter().for_each(|page| {
-                let links = page.links(subdomains, tld);
-                new_links.extend(links);
-                self.pages.push(page);
-            });
-
-            self.links = &new_links - &self.links_visited;
         }
     }
 
@@ -412,35 +308,6 @@ fn crawl() {
 }
 
 #[test]
-fn scrape() {
-    let mut website: Website = Website::new("https://choosealicense.com");
-    website.scrape();
-    assert!(
-        website
-            .links_visited
-            .contains(&"https://choosealicense.com/licenses/".to_string()),
-        "{:?}",
-        website.links_visited
-    );
-
-    assert_eq!(website.get_pages()[0].get_html().is_empty(), false);
-}
-
-#[test]
-fn crawl_subsequential() {
-    let mut website: Website = Website::new("https://choosealicense.com");
-    website.configuration.delay = 250;
-    website.crawl_sync();
-    assert!(
-        website
-            .links_visited
-            .contains(&"https://choosealicense.com/licenses/".to_string()),
-        "{:?}",
-        website.links_visited
-    );
-}
-
-#[test]
 fn crawl_invalid() {
     let url = "https://w.com";
     let mut website: Website = Website::new(url);
@@ -449,23 +316,6 @@ fn crawl_invalid() {
     uniq.insert(format!("{}/", url.to_string())); // TODO: remove trailing slash mutate
 
     assert_eq!(website.links_visited, uniq); // only the target url should exist
-}
-
-#[test]
-fn crawl_link_callback() {
-    let mut website: Website = Website::new("https://choosealicense.com");
-    website.on_link_find_callback = |s| {
-        log("callback link target: {}", &s);
-        s
-    };
-    website.crawl();
-    assert!(
-        website
-            .links_visited
-            .contains(&"https://choosealicense.com/licenses/".to_string()),
-        "{:?}",
-        website.links_visited
-    );
 }
 
 #[test]

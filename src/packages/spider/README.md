@@ -46,7 +46,6 @@ website.configuration.respect_robots_txt = true;
 website.configuration.delay = 2000; // Defaults to 250 ms
 website.configuration.concurrency = 10; // Defaults to number of cpus available * 4
 website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version
-website.on_link_find_callback = |s| { println!("link target: {}", s); s }; // Callback to run on each link find
 
 website.crawl();
 ```
