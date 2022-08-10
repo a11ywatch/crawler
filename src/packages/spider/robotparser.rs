@@ -23,7 +23,6 @@
 //! }
 //! ```
 
-use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -37,9 +36,9 @@ use url::Url;
 /// A rule line is a single "Allow:" (allowance==True) or "Disallow:"
 /// (allowance==False) followed by a path."""
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct RuleLine<'a> {
+struct RuleLine {
     /// Path of the rule
-    path: Cow<'a, str>,
+    path: String,
     /// Is the rule allowed?
     allowance: bool,
 }
@@ -55,11 +54,11 @@ pub struct RequestRate {
 
 /// An entry has one or more user-agents and zero or more rulelines
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct Entry<'a> {
+struct Entry {
     /// Multiple user agents to use
     useragents: RefCell<Vec<String>>,
     /// Rules that should be ignored
-    rulelines: RefCell<Vec<RuleLine<'a>>>,
+    rulelines: RefCell<Vec<RuleLine>>,
     /// Time to wait in between crawls
     crawl_delay: Option<Duration>,
     /// The request rate to respect
@@ -68,11 +67,11 @@ struct Entry<'a> {
 
 /// robots.txt file parser
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct RobotFileParser<'a> {
+pub struct RobotFileParser {
     /// Entire robots.txt list of urls
-    entries: RefCell<Vec<Entry<'a>>>,
+    entries: RefCell<Vec<Entry>>,
     /// Base entry to list
-    default_entry: RefCell<Entry<'a>>,
+    default_entry: RefCell<Entry>,
     /// Dis-allow links reguardless of robots.txt
     disallow_all: Cell<bool>,
     /// Allow links reguardless of robots.txt
@@ -87,11 +86,8 @@ pub struct RobotFileParser<'a> {
     pub user_agent: String,
 }
 
-impl<'a> RuleLine<'a> {
-    fn new<S>(path: S, allowance: bool) -> RuleLine<'a>
-    where
-        S: Into<Cow<'a, str>>,
-    {
+impl RuleLine {
+    fn new(path: String, allowance: bool) -> RuleLine {
         let path = path.into();
         let mut allow = allowance;
         if path == "" && !allowance {
@@ -109,9 +105,9 @@ impl<'a> RuleLine<'a> {
     }
 }
 
-impl<'a> Entry<'a> {
+impl Entry {
     /// Base collection to manage robot.txt data
-    fn new() -> Entry<'a> {
+    fn new() -> Entry {
         Entry {
             useragents: RefCell::new(vec![]),
             rulelines: RefCell::new(vec![]),
@@ -155,15 +151,14 @@ impl<'a> Entry<'a> {
     }
 
     /// Add rule to list
-    fn push_ruleline(&self, ruleline: RuleLine<'a>) {
+    fn push_ruleline(&self, ruleline: RuleLine) {
         let mut rulelines = self.rulelines.borrow_mut();
         rulelines.push(ruleline);
     }
 
     /// Determine if user agent exist
     fn has_useragent(&self, useragent: &str) -> bool {
-        let useragents = self.useragents.borrow();
-        useragents.contains(&useragent.to_string())
+        self.useragents.borrow().contains(&useragent.to_string())
     }
 
     /// Is the user-agent list empty?
@@ -194,15 +189,15 @@ impl<'a> Entry<'a> {
     }
 }
 
-impl<'a> Default for Entry<'a> {
-    fn default() -> Entry<'a> {
+impl Default for Entry {
+    fn default() -> Entry {
         Entry::new()
     }
 }
 
-impl<'a> RobotFileParser<'a> {
+impl RobotFileParser {
     /// Establish a new robotparser for a website domain
-    pub fn new<T: AsRef<str>>(url: T) -> RobotFileParser<'a> {
+    pub fn new<T: AsRef<str>>(url: T) -> RobotFileParser {
         let parsed_url = Url::parse(url.as_ref()).unwrap();
 
         RobotFileParser {
@@ -246,7 +241,7 @@ impl<'a> RobotFileParser<'a> {
     /// Reads the robots.txt URL and feeds it to the parser.
     pub fn read(&self, client: &Client) {
         let request = client.get(self.url.clone());
-        let request = request.header(USER_AGENT, self.user_agent.to_string());
+        let request = request.header(USER_AGENT, &self.user_agent);
         let mut res = match request.send() {
             Ok(res) => res,
             Err(_) => {
@@ -277,7 +272,7 @@ impl<'a> RobotFileParser<'a> {
         self.parse(&lines);
     }
 
-    fn _add_entry(&self, entry: Entry<'a>) {
+    fn _add_entry(&self, entry: Entry) {
         if entry.has_useragent("*") {
             // the default entry is considered last
             let mut default_entry = self.default_entry.borrow_mut();

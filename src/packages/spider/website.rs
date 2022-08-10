@@ -8,8 +8,8 @@ use hashbrown::HashSet;
 use rayon::ThreadPool;
 use rayon::ThreadPoolBuilder;
 use reqwest::blocking::Client;
-use reqwest::header;
 use reqwest::header::CONNECTION;
+use reqwest::header::{HeaderMap, HeaderValue};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 use tokio;
@@ -27,7 +27,7 @@ use tonic::transport::Channel;
 /// }
 /// ```
 #[derive(Debug)]
-pub struct Website<'a> {
+pub struct Website {
     /// configuration properties for website.
     pub configuration: Configuration,
     /// this is a start URL given when instanciate with `new`.
@@ -39,12 +39,12 @@ pub struct Website<'a> {
     /// contains page visited
     pages: Vec<Page>,
     /// Robot.txt parser holder.
-    robot_file_parser: RobotFileParser<'a>,
+    robot_file_parser: RobotFileParser,
 }
 
 type Message = HashSet<String>;
 
-impl<'a> Website<'a> {
+impl Website {
     /// Initialize Website object with a start link to crawl.
     pub fn new(domain: &str) -> Self {
         Self {
@@ -53,7 +53,7 @@ impl<'a> Website<'a> {
             pages: Vec::new(),
             robot_file_parser: RobotFileParser::new(&format!("{}/robots.txt", domain)), // TODO: lazy establish
             links: HashSet::from([format!("{}/", domain)]),
-            domain: domain.to_string(),
+            domain: domain.to_owned(),
         }
     }
 
@@ -82,7 +82,7 @@ impl<'a> Website<'a> {
     /// configure the robots parser on initial crawl attempt and run
     pub fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt && self.robot_file_parser.mtime() == 0 {
-            self.robot_file_parser.user_agent = self.configuration.user_agent.to_string();
+            self.robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
             self.robot_file_parser.read(client);
             self.configuration.delay = self
                 .robot_file_parser
@@ -94,11 +94,16 @@ impl<'a> Website<'a> {
 
     /// configure http client
     fn configure_http_client(&mut self) -> Client {
-        let mut headers = header::HeaderMap::new();
-        headers.insert(CONNECTION, header::HeaderValue::from_static("keep-alive"));
+        lazy_static! {
+            static ref HEADERS: HeaderMap<HeaderValue> = {
+                let mut headers = HeaderMap::new();
+                headers.insert(CONNECTION, HeaderValue::from_static("keep-alive"));
 
+                headers
+            };
+        }
         Client::builder()
-            .default_headers(headers)
+            .default_headers(HEADERS.clone())
             .user_agent(&self.configuration.user_agent)
             .brotli(true)
             .cookie_store(true)
@@ -282,10 +287,6 @@ impl<'a> Website<'a> {
     pub fn is_allowed_robots(&self, link: &String) -> bool {
         self.robot_file_parser.can_fetch("*", link)
     }
-}
-
-impl<'a> Drop for Website<'a> {
-    fn drop(&mut self) {}
 }
 
 /// blocking sleep keeping thread alive
