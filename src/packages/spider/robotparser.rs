@@ -157,8 +157,8 @@ impl Entry {
     }
 
     /// Determine if user agent exist
-    fn has_useragent(&self, useragent: &str) -> bool {
-        self.useragents.borrow().contains(&useragent.to_string())
+    fn has_useragent(&self) -> bool {
+        self.useragents.borrow().iter().any(|a| a == "*")
     }
 
     /// Is the user-agent list empty?
@@ -273,7 +273,7 @@ impl RobotFileParser {
     }
 
     fn _add_entry(&self, entry: Entry) {
-        if entry.has_useragent("*") {
+        if entry.has_useragent() {
             // the default entry is considered last
             let mut default_entry = self.default_entry.borrow_mut();
 
