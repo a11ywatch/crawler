@@ -48,12 +48,12 @@ impl Website {
     /// Initialize Website object with a start link to crawl.
     pub fn new(domain: &str) -> Self {
         Self {
+            domain: domain.to_owned(),
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
             pages: Vec::new(),
             robot_file_parser: RobotFileParser::new(&format!("{}/robots.txt", domain)), // TODO: lazy establish
             links: HashSet::from([format!("{}/", domain)]),
-            domain: domain.to_owned(),
         }
     }
 

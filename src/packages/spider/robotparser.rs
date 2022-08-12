@@ -32,6 +32,7 @@ use reqwest::header::USER_AGENT;
 use reqwest::StatusCode;
 use std::io::Read;
 use url::Url;
+use percent_encoding::percent_decode;
 
 /// A rule line is a single "Allow:" (allowance==True) or "Disallow:"
 /// (allowance==False) followed by a path."""
@@ -87,21 +88,15 @@ pub struct RobotFileParser {
 }
 
 impl RuleLine {
-    fn new(path: String, allowance: bool) -> RuleLine {
-        let path = path.into();
-        let mut allow = allowance;
-        if path == "" && !allowance {
-            // an empty value means allow all
-            allow = true;
-        }
+    fn new(path: &str, allowance: bool) -> RuleLine {
         RuleLine {
-            path: path,
-            allowance: allow,
+            path: path.into(),
+            allowance: path == "" && !allowance || allowance,
         }
     }
 
     fn applies_to(&self, filename: &str) -> bool {
-        self.path == "*" || filename.starts_with(&self.path[..])
+        self.path == "*" || filename.starts_with(&self.path)
     }
 }
 
@@ -120,6 +115,7 @@ impl Entry {
     fn applies_to(&self, useragent: &str) -> bool {
         let ua = useragent.split('/').nth(0).unwrap_or("").to_lowercase();
         let useragents = self.useragents.borrow();
+
         for agent in &*useragents {
             if agent == "*" {
                 return true;
@@ -240,7 +236,7 @@ impl RobotFileParser {
 
     /// Reads the robots.txt URL and feeds it to the parser.
     pub fn read(&self, client: &Client) {
-        let request = client.get(self.url.clone());
+        let request = client.get(self.url.as_ref());
         let request = request.header(USER_AGENT, &self.user_agent);
         let mut res = match request.send() {
             Ok(res) => res,
@@ -294,8 +290,6 @@ impl RobotFileParser {
     /// one or more blank lines.
     ///
     pub fn parse<T: AsRef<str>>(&self, lines: &[T]) {
-        use percent_encoding::percent_decode;
-
         // states:
         //   0: start state
         //   1: saw user-agent line
@@ -344,13 +338,13 @@ impl RobotFileParser {
                     }
                     ref x if x.to_lowercase() == "disallow" => {
                         if state != 0 {
-                            entry.push_ruleline(RuleLine::new(part1, false));
+                            entry.push_ruleline(RuleLine::new(&part1, false));
                             state = 2;
                         }
                     }
                     ref x if x.to_lowercase() == "allow" => {
                         if state != 0 {
-                            entry.push_ruleline(RuleLine::new(part1, true));
+                            entry.push_ruleline(RuleLine::new(&part1, true));
                             state = 2;
                         }
                     }
@@ -397,8 +391,6 @@ impl RobotFileParser {
 
     /// Using the parsed robots.txt decide if useragent can fetch url
     pub fn can_fetch<T: AsRef<str>>(&self, useragent: T, url: T) -> bool {
-        use percent_encoding::percent_decode;
-
         let useragent = useragent.as_ref();
         let url = url.as_ref();
 
