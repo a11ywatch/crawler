@@ -14,7 +14,7 @@ pub struct MyCrawler;
 
 #[tonic::async_trait]
 impl Crawler for MyCrawler {
-    /// start scanning a website giving links crawled in realtime to gRPC API. TODO: move to stream.
+    /// start scanning a website giving links crawled via grpc streams
     async fn scan(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
 
@@ -37,7 +37,7 @@ impl Crawler for MyCrawler {
 
         Ok(Response::new(reply))
     }
-    /// crawl website and send all links crawled when completed to API client gRPC.
+    /// crawl website and send all links crawled when completed
     async fn crawl(&self, request: Request<ScanRequest>) -> Result<Response<ScanReply>, Status> {
         let req = request.into_inner();
 

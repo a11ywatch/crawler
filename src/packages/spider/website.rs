@@ -39,7 +39,7 @@ pub struct Website {
     /// contains page visited
     pages: Vec<Page>,
     /// Robot.txt parser holder.
-    robot_file_parser: RobotFileParser,
+    robot_file_parser: Option<RobotFileParser>,
 }
 
 type Message = HashSet<String>;
@@ -52,7 +52,7 @@ impl Website {
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
             pages: Vec::new(),
-            robot_file_parser: RobotFileParser::new(&format!("{}/robots.txt", domain)), // TODO: lazy establish
+            robot_file_parser: None,
             links: HashSet::from([format!("{}/", domain)]),
         }
     }
@@ -81,14 +81,20 @@ impl Website {
 
     /// configure the robots parser on initial crawl attempt and run
     pub fn configure_robots_parser(&mut self, client: &Client) {
-        if self.configuration.respect_robots_txt && self.robot_file_parser.mtime() == 0 {
-            self.robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
-            self.robot_file_parser.read(client);
-            self.configuration.delay = self
-                .robot_file_parser
-                .get_crawl_delay(&self.robot_file_parser.user_agent) // returns the crawl delay in seconds
-                .unwrap_or(self.get_delay())
-                .as_millis() as u64;
+        if self.configuration.respect_robots_txt {
+            let mut robot_file_parser = RobotFileParser::new(&format!("{}/robots.txt", self.domain));
+
+            // get the latest robots
+            if robot_file_parser.mtime() == 0 {
+                robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
+                robot_file_parser.read(client);
+                self.configuration.delay = robot_file_parser
+                    .get_crawl_delay(&robot_file_parser.user_agent) // returns the crawl delay in seconds
+                    .unwrap_or(self.get_delay())
+                    .as_millis() as u64;
+            }
+
+            self.robot_file_parser = Some(robot_file_parser);
         }
     }
 
@@ -285,7 +291,13 @@ impl Website {
     ///
     /// - is not forbidden in robot.txt file (if parameter is defined)  
     pub fn is_allowed_robots(&self, link: &String) -> bool {
-        self.robot_file_parser.can_fetch("*", link)
+        if self.configuration.respect_robots_txt {
+            let robot_file_parser = self.robot_file_parser.as_ref().unwrap(); // unwrap will always return
+
+            robot_file_parser.can_fetch("*", link)
+        } else {
+            true
+        }
     }
 }
 
@@ -340,28 +352,35 @@ fn not_crawl_blacklist() {
 fn test_respect_robots_txt() {
     let mut website: Website = Website::new("https://stackoverflow.com");
     website.configuration.respect_robots_txt = true;
+    website.configuration.user_agent = "*".into();
+
+    let client = website.setup();
+    website.configure_robots_parser(&client);
+
     assert_eq!(website.configuration.delay, 250);
+
     assert!(!website.is_allowed(&"https://stackoverflow.com/posts/".to_string()));
 
     // test match for bing bot
     let mut website_second: Website = Website::new("https://www.mongodb.com");
     website_second.configuration.respect_robots_txt = true;
     website_second.configuration.user_agent = "bingbot".into();
-    let website_second_client = website_second.setup();
 
-    website_second.configure_robots_parser(&website_second_client);
+    let client_second = website_second.setup();
+    website_second.configure_robots_parser(&client_second);
+    
     assert_eq!(
         website_second.configuration.user_agent,
-        website_second.robot_file_parser.user_agent
+        website_second.robot_file_parser.as_ref().unwrap().user_agent
     );
     assert_eq!(website_second.configuration.delay, 60000); // should equal one minute in ms
 
     // test crawl delay with wildcard agent [DOES not work when using set agent]
     let mut website_third: Website = Website::new("https://www.mongodb.com");
     website_third.configuration.respect_robots_txt = true;
-    let website_third_client = website_third.setup();
+    let client_third = website_third.setup();
 
-    website_third.configure_robots_parser(&website_third_client);
+    website_third.configure_robots_parser(&client_third);
 
     assert_eq!(website_third.configuration.delay, 10000); // should equal 10 seconds in ms
 }
