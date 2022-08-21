@@ -82,7 +82,8 @@ impl Website {
     /// configure the robots parser on initial crawl attempt and run
     pub fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt {
-            let mut robot_file_parser = RobotFileParser::new(&format!("{}/robots.txt", self.domain));
+            let mut robot_file_parser =
+                RobotFileParser::new(&format!("{}/robots.txt", self.domain));
 
             // get the latest robots
             if robot_file_parser.mtime() == 0 {
@@ -368,10 +369,14 @@ fn test_respect_robots_txt() {
 
     let client_second = website_second.setup();
     website_second.configure_robots_parser(&client_second);
-    
+
     assert_eq!(
         website_second.configuration.user_agent,
-        website_second.robot_file_parser.as_ref().unwrap().user_agent
+        website_second
+            .robot_file_parser
+            .as_ref()
+            .unwrap()
+            .user_agent
     );
     assert_eq!(website_second.configuration.delay, 60000); // should equal one minute in ms
 

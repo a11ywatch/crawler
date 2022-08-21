@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.4.33"
+version = "0.5.5"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC web crawler that is very fast"
@@ -12,9 +12,9 @@ categories = ["accessibility", "asynchronous"]
 
 [dependencies]
 tokio = { version = "^1.20.1", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
-tonic = { version = "0.7.2" }
-prost = "0.10.0"
-prost-types = "0.10.0"
+tonic = { version = "0.8.0" }
+prost = "0.11.0"
+prost-types = "0.11.0"
 num_cpus = "1.13.0"
 reqwest = { version = "0.11.11", features = ["blocking", "cookies", "brotli", "native-tls-alpn"] }
 scraper = "0.13"
@@ -33,7 +33,7 @@ name = "health_client"
 path = "src/hc_client.rs"
 
 [build-dependencies]
-tonic-build = { version = "0.7.2" }
+tonic-build = { version = "0.8.0" }
 quote = "1.0.18"
 failure_derive = "0.1.8"
 cc = "=1.0"

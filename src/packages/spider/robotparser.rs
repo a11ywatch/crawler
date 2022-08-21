@@ -23,12 +23,12 @@
 //! }
 //! ```
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::header::USER_AGENT;
 use reqwest::StatusCode;
 use std::io::Read;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use url::Url;
 
 /// A rule line is a single "Allow:" (allowance==True) or "Disallow:"

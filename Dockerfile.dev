@@ -8,7 +8,7 @@ ENV GRPC_HOST_API=api:50051
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    gcc cmake libc6 libssl-dev npm
+    gcc cmake libc6 libssl-dev npm protobuf-compiler libprotobuf-dev
 
 RUN cargo install --no-default-features --path .
 

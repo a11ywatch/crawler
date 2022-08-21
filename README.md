@@ -56,6 +56,33 @@ After import at the top of your project to start the gRPC server or run node dir
 import "@a11ywatch/crawler";
 ```
 
+### Dependencies
+
+npm is required to install the protcol buffers.
+
+In order to build `crawler` locally >= 0.5.0, you need the `protoc` Protocol Buffers compiler, along with Protocol Buffers resource files.
+
+#### Ubuntu
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y protobuf-compiler libprotobuf-dev
+```
+
+#### Alpine Linux
+
+```sh
+sudo apk add protoc protobuf-dev
+```
+
+#### macOS
+
+Assuming [Homebrew](https://brew.sh/) is already installed. (If not, see instructions for installing Homebrew on [the Homebrew website](https://brew.sh/).)
+
+```zsh
+brew install protobuf
+```
+
 ## About
 
 This crawler is optimized for reduced latency and performance as it can handle over 10,000 pages within seconds.
