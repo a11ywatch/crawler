@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 extern crate tokio;
 extern crate tonic;
 extern crate ua_generator;
@@ -12,11 +13,11 @@ extern crate scraper;
 extern crate url;
 #[macro_use]
 extern crate lazy_static;
+pub use packages::spider;
 
+// internal packages.
 pub mod interface;
 pub mod packages;
 pub mod rpc;
-pub mod scanner; // internal packages.
-
-pub use packages::spider;
+pub mod scanner;
 pub use rpc::handlers::grpc_start;

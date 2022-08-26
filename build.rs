@@ -7,6 +7,7 @@ use std::process::Command;
 //     }
 // }
 
+#[allow(missing_docs)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
