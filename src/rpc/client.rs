@@ -4,12 +4,12 @@ pub mod website {
 
 use std::env::var;
 
-use tonic::transport::Channel;
+use tonic::{transport::Channel, Streaming};
 
 use crate::spider::utils::log;
 
 // gRPC client
-pub use website::{website_service_client::WebsiteServiceClient, ScanInitParams, ScanParams};
+pub use website::{website_service_client::WebsiteServiceClient, ScanInitParams, ScanParams, ScanStreamResponse};
 
 /// create gRPC client from the API server.
 pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::transport::Error> {
@@ -70,17 +70,33 @@ pub async fn monitor(
         user_id,
         ..Default::default()
     });
-    let mut stream = client.scan_stream(request).await.unwrap().into_inner();
+    // let mut stream = client.scan_stream(request).await.unwrap().into_inner();
+    let stream: Option<Streaming<ScanStreamResponse>> = match client.scan_stream(request).await {
+        // The arms of a match must cover all the possible values
+        Ok(val) => Some(val.into_inner()),
+        Err(e) => {
+            log("error status-code :", &e.code().to_string());
 
-    let mut perform_shutdown = false; // shutdown was performed on website
-
-    while let Some(res) = stream.message().await.unwrap() {
-        if res.message == "shutdown" {
-            perform_shutdown = true;
+            None
         }
-        log("gRPC(stream): finished -", &link);
-    }
+    };
 
-    // shutdown the thread
+    let mut perform_shutdown = false; // shutdown was performed on website - terminate entire crawl
+
+    match stream {
+        Some(mut res) => {
+            while let Some(r) = res.message().await.unwrap_or_default() {
+                log("[stream]: processed -", &link);
+                if r.message == "shutdown" {
+                    perform_shutdown = true;
+                }
+            }
+        },
+        None => {
+            // perform shut down true
+            perform_shutdown = true;
+        },
+    };
+
     !perform_shutdown
 }

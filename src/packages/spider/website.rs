@@ -172,19 +172,19 @@ impl Website {
 
                 self.links_visited.insert(link.into());
 
-                let link = link.clone();
                 let tx = tx.clone();
-                let cx = client.clone();
 
-                pool.spawn(move || {
-                    if delay_enabled {
-                        tokio_sleep(&Duration::from_millis(delay));
-                    }
-
-                    let page = Page::new(&link, &cx);
-                    let links = page.links(subdomains, tld);
-
-                    tx.send(links).unwrap();
+                pool.scope(move |s| {
+                    s.spawn(move |_| {
+                        if delay_enabled {
+                            tokio_sleep(&Duration::from_millis(delay));
+                        }
+    
+                        let page = Page::new(&link, &client);
+                        let links = page.links(subdomains, tld);
+    
+                        tx.send(links).unwrap();
+                    });
                 });
             }
 
@@ -231,21 +231,22 @@ impl Website {
 
                 let mut rpcx = rpcx.clone();
                 let can_process = monitor(&mut rpcx, &link, user_id).await;
+                drop(rpcx);
 
                 // can continue processing the crawls
                 if can_process {
-                    let cx = client.clone();
-                    let link = link.clone();
                     let tx = tx.clone();
 
-                    pool.spawn(move || {
-                        if delay_enabled {
-                            tokio_sleep(&Duration::from_millis(delay));
-                        }
-                        let page = Page::new(&link, &cx);
-                        let links = page.links(subdomains, tld);
+                    pool.scope(move |s| {
+                        s.spawn(move |_| {
+                            if delay_enabled {
+                                tokio_sleep(&Duration::from_millis(delay));
+                            }
+                            let page = Page::new(&link, &client);
+                            let links = page.links(subdomains, tld);
 
-                        tx.send(links).unwrap();
+                            tx.send(links).unwrap();
+                        });
                     });
                 } else {
                     crawl_valid = false;
