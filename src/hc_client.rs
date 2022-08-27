@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let inner = response.into_inner();
 
-    println!("{:?}", inner);
+    print!("{:?}", inner);
 
     Ok(())
 }
