@@ -7,7 +7,7 @@ use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
 use rayon::ThreadPool;
 use rayon::ThreadPoolBuilder;
-use reqwest::blocking::Client;
+use reqwest::Client;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -15,6 +15,7 @@ use std::time::Duration;
 use tokio;
 use tokio::time::sleep;
 use tonic::transport::Channel;
+use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver};
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -115,7 +116,7 @@ impl Website {
             .brotli(true)
             .cookie_store(true)
             .build()
-            .expect("Failed building client.")
+            .unwrap_or_default()
     }
 
     /// configure rayon thread pool
@@ -123,7 +124,7 @@ impl Website {
         ThreadPoolBuilder::new()
             .num_threads(self.configuration.concurrency)
             .build()
-            .expect("Failed building thread pool.")
+            .unwrap()
     }
 
     /// setup config for crawl
@@ -174,17 +175,15 @@ impl Website {
 
                 let tx = tx.clone();
 
-                pool.scope(move |s| {
-                    s.spawn(move |_| {
-                        if delay_enabled {
-                            tokio_sleep(&Duration::from_millis(delay));
-                        }
-    
-                        let page = Page::new(&link, &client);
-                        let links = page.links(subdomains, tld);
-    
-                        tx.send(links).unwrap();
-                    });
+                tokio::spawn(async {
+                    if delay_enabled {
+                        tokio_sleep(&Duration::from_millis(delay));
+                    }
+
+                    let page = Page::new(&link, &client).await;
+                    let links = page.links(subdomains, tld);
+
+                    tx.send(links).unwrap();
                 });
             }
 
@@ -219,14 +218,13 @@ impl Website {
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, rx): (Sender<Message>, Receiver<Message>) = channel();
+            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = tokio::sync::mpsc::unbounded_channel();
 
             for link in self.links.iter() {
                 if !self.is_allowed(link) {
                     continue;
                 }
                 log("fetch", link);
-                // insiert visited link
                 self.links_visited.insert(link.into());
 
                 let mut rpcx = rpcx.clone();
@@ -234,24 +232,24 @@ impl Website {
                 drop(rpcx);
 
                 // can continue processing the crawls
-                if can_process {
-                    let tx = tx.clone();
-
-                    pool.scope(move |s| {
-                        s.spawn(move |_| {
-                            if delay_enabled {
-                                tokio_sleep(&Duration::from_millis(delay));
-                            }
-                            let page = Page::new(&link, &client);
-                            let links = page.links(subdomains, tld);
-
-                            tx.send(links).unwrap();
-                        });
-                    });
-                } else {
+                if !can_process {
                     crawl_valid = false;
                     break;
                 }
+
+                let tx = tx.clone();
+
+                pool.scope(move |s| {
+                    s.spawn(move |_| {
+                        if delay_enabled {
+                            tokio_sleep(&Duration::from_millis(delay));
+                        }
+                        let page = Page::new(&link, &client);
+                        let links = page.links(subdomains, tld);
+
+                        tx.send(links).unwrap();
+                    });
+                });
             }
 
             drop(tx);

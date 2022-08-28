@@ -1,6 +1,6 @@
 use super::utils::fetch_page_html;
 use hashbrown::HashSet;
-use reqwest::blocking::Client;
+use reqwest::Client;
 use scraper::{Html, Selector};
 use url::Url;
 
@@ -24,8 +24,8 @@ const MEDIA_SELECTOR_STATIC: &'static str = r#"[href$=".html"] [href$=".htm"] [h
 
 impl Page {
     /// Instantiate a new page and start to scrape it.
-    pub fn new(url: &str, client: &Client) -> Self {
-        let html = fetch_page_html(&url, &client); // TODO: remove heavy cpu / network from new
+    pub async fn new(url: &str, client: &Client) -> Self {
+        let html = fetch_page_html(&url, &client).await; // TODO: remove heavy cpu / network from new
 
         Page::build(url, &html)
     }
@@ -179,14 +179,14 @@ fn parse_links() {
     );
 }
 
-#[test]
-fn test_abs_path() {
+#[tokio::test]
+async fn test_abs_path() {
     let client = Client::builder()
         .user_agent("spider/1.1.2")
         .build()
         .unwrap();
     let link_result = "https://choosealicense.com/";
-    let page: Page = Page::new(&link_result, &client);
+    let page: Page = Page::new(&link_result, &client).await;
 
     assert_eq!(
         page.abs_path("/page"),
