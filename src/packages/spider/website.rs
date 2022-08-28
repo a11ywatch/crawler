@@ -5,14 +5,15 @@ use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
-use reqwest::Client;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::Client;
 use std::time::Duration;
-use tokio::time::sleep;
 use tokio;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::time::sleep;
 use tonic::transport::Channel;
-use tokio::sync::mpsc::{UnboundedSender, UnboundedReceiver};
+use rayon::prelude::*;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -111,7 +112,6 @@ impl Website {
             .default_headers(HEADERS.clone())
             .user_agent(&self.configuration.user_agent)
             .brotli(true)
-            .cookie_store(true)
             .build()
             .unwrap_or_default()
     }
@@ -128,8 +128,7 @@ impl Website {
     pub async fn crawl(&mut self) {
         let client = self.setup().await;
 
-        self.crawl_concurrent(&client)
-            .await;
+        self.crawl_concurrent(&client).await;
     }
 
     /// Start to crawl website with gRPC streams
@@ -145,10 +144,7 @@ impl Website {
     }
 
     /// Start to crawl website concurrently using gRPC callback
-    async fn crawl_concurrent(
-        &mut self,
-        client: &Client
-    ) {
+    async fn crawl_concurrent(&mut self, client: &Client) {
         // crawl delay between
         let delay = self.configuration.delay;
         let delay_enabled = delay > 0;
@@ -158,13 +154,13 @@ impl Website {
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = tokio::sync::mpsc::unbounded_channel();
+            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
 
             for link in self.links.iter() {
                 if !self.is_allowed(link) {
                     continue;
                 }
-                log("fetch", link);
+                log("fetch", &link);
                 self.links_visited.insert(link.into());
 
                 let tx = tx.clone();
@@ -178,7 +174,12 @@ impl Website {
                     let page = Page::new(&link, &client).await;
                     let links = page.links(subdomains, tld);
 
-                    tx.send(links).unwrap();
+                    drop(client);
+                    drop(link);
+
+                    if let Err(_) = tx.send(links).await {
+                        log("receiver dropped", "");
+                    }
                 });
             }
 
@@ -201,9 +202,6 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        // crawl delay between
-        let delay = self.configuration.delay;
-        let delay_enabled = delay > 0;
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
@@ -212,18 +210,16 @@ impl Website {
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = tokio::sync::mpsc::unbounded_channel();
+            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(50);
 
             for link in self.links.iter() {
                 if !self.is_allowed(link) {
                     continue;
                 }
-                log("fetch", link);
+                log("fetch", &link);
                 self.links_visited.insert(link.into());
 
-                let mut rpcx = rpcx.clone();
-                let can_process = monitor(&mut rpcx, &link, user_id).await;
-                drop(rpcx);
+                let can_process = monitor(rpcx, &link, user_id).await;
 
                 // can continue processing the crawls
                 if !can_process {
@@ -236,13 +232,15 @@ impl Website {
                 let link = link.clone();
 
                 tokio::spawn(async move {
-                    if delay_enabled {
-                        sleep(Duration::from_millis(delay)).await;
-                    }
                     let page = Page::new(&link, &client).await;
                     let links = page.links(subdomains, tld);
 
-                    tx.send(links).unwrap();
+                    drop(client);
+                    drop(link);
+
+                    if let Err(_) = tx.send(links).await {
+                        log("receiver dropped", "");
+                    }
                 });
             }
 
@@ -252,7 +250,7 @@ impl Website {
                 let mut new_links: HashSet<String> = HashSet::new();
 
                 while let Some(msg) = rx.recv().await {
-                    new_links.extend(msg);
+                    new_links.par_extend(msg);
                 }
 
                 self.links = &new_links - &self.links_visited;

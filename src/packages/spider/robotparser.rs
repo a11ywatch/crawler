@@ -14,7 +14,7 @@
 //! ```rust,ignore
 //! extern crate spider;
 //!
-//! use spider::packages::robotparser::RobotFileParser;;
+//! use spider::packages::robotparser::RobotFileParser;
 //!
 //! fn main() {
 //!     let parser = RobotFileParser::new("http://www.python.org/robots.txt");
@@ -23,9 +23,9 @@
 //! }
 //! ```
 
+use reqwest::header::USER_AGENT;
 use reqwest::Client;
 use reqwest::Response;
-use reqwest::header::USER_AGENT;
 use reqwest::StatusCode;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use url::Url;

@@ -9,7 +9,9 @@ use tonic::{transport::Channel, Streaming};
 use crate::spider::utils::log;
 
 // gRPC client
-pub use website::{website_service_client::WebsiteServiceClient, ScanInitParams, ScanParams, ScanStreamResponse};
+pub use website::{
+    website_service_client::WebsiteServiceClient, ScanInitParams, ScanParams, ScanStreamResponse,
+};
 
 /// create gRPC client from the API server.
 pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::transport::Error> {
@@ -91,11 +93,11 @@ pub async fn monitor(
                     perform_shutdown = true;
                 }
             }
-        },
+        }
         None => {
             // perform shut down true
             perform_shutdown = true;
-        },
+        }
     };
 
     !perform_shutdown
