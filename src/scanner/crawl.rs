@@ -21,7 +21,7 @@ pub async fn crawl(
     website.configuration.tld = tld;
     website.configuration.user_agent = if !agent.is_empty() { agent } else { spoof_ua() }.into();
 
-    website.crawl();
+    website.crawl().await;
 
     for page in website.get_pages() {
         pages.push(page.get_url().to_string());

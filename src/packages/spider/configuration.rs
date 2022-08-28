@@ -1,5 +1,3 @@
-use num_cpus;
-
 /// Structure to configure `Website` crawler
 /// ```rust
 /// use website_crawler::spider::website::Website;
@@ -23,27 +21,14 @@ pub struct Configuration {
     /// User-Agent
     pub user_agent: String,
     /// Polite crawling delay in milli seconds.
-    pub delay: u64,
-    /// How many request can be run simultaneously.
-    pub concurrency: usize,
+    pub delay: u64
 }
 
 impl Configuration {
     /// Represents crawl configuration for a website.
     pub fn new() -> Self {
-        let logical_cpus = num_cpus::get();
-        let physical_cpus = num_cpus::get_physical();
-
-        // determine simultaneous multithreading
-        let concurrency = if logical_cpus > physical_cpus {
-            logical_cpus / physical_cpus
-        } else {
-            logical_cpus
-        } * 4;
-
         Self {
             delay: 250,
-            concurrency,
             ..Default::default()
         }
     }

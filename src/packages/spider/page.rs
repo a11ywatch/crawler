@@ -160,15 +160,16 @@ impl Page {
         joined
     }
 }
-#[test]
-fn parse_links() {
+
+#[tokio::test]
+async fn parse_links() {
     let client = Client::builder()
         .user_agent("spider/1.1.2")
         .build()
         .unwrap();
 
     let link_result = "https://choosealicense.com/";
-    let page: Page = Page::new(&link_result, &client);
+    let page: Page = Page::new(&link_result, &client).await;
     let links = page.links(false, false);
 
     assert!(

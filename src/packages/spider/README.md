@@ -44,7 +44,6 @@ let mut website: Website = Website::new("https://choosealicense.com");
 website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".to_string());
 website.configuration.respect_robots_txt = true;
 website.configuration.delay = 2000; // Defaults to 250 ms
-website.configuration.concurrency = 10; // Defaults to number of cpus available * 4
 website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version
 
 website.crawl();
