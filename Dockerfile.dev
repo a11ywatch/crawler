@@ -10,7 +10,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     gcc cmake libc6 libssl-dev npm protobuf-compiler libprotobuf-dev
 
-RUN cargo install --no-default-features --path .
+RUN cargo install --path .
 
 FROM debian:bullseye-slim
 

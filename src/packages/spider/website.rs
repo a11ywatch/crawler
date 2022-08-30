@@ -47,12 +47,12 @@ impl Website {
     /// Initialize Website object with a start link to crawl.
     pub fn new(domain: &str) -> Self {
         Self {
-            domain: domain.to_owned(),
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
             pages: Vec::new(),
             robot_file_parser: None,
-            links: HashSet::from([format!("{}/", domain)]),
+            links: HashSet::from([format!("{}/", &domain)]),
+            domain: domain.into(),
         }
     }
 
@@ -62,7 +62,7 @@ impl Website {
             self.pages.clone()
         } else {
             self.links_visited
-                .iter()
+                .par_iter()
                 .map(|l| Page::build(l, ""))
                 .collect()
         }
@@ -219,10 +219,8 @@ impl Website {
                 log("fetch", &link);
                 self.links_visited.insert(link.into());
 
-                let can_process = monitor(rpcx, &link, user_id).await;
-
                 // can continue processing the crawls
-                if !can_process {
+                if !monitor(rpcx, &link, user_id).await {
                     crawl_valid = false;
                     break;
                 }

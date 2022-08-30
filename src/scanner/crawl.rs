@@ -5,32 +5,33 @@ use ua_generator::ua::spoof_ua;
 
 /// crawl all pages and gather links sending request back once finished. Built for CI usage.
 pub async fn crawl(
-    domain: &String,
+    domain: String,
     user_id: u32,
     respect_robots_txt: bool,
-    agent: &String,
+    agent: String,
     subdomains: bool,
     tld: bool,
 ) -> Result<(), core::fmt::Error> {
-    let mut website: Website = Website::new(domain);
-    let mut pages: Vec<String> = Vec::new();
+    let mut website: Website = Website::new(&domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
     website.configuration.delay = 18;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.user_agent = if !agent.is_empty() { agent } else { spoof_ua() }.into();
+    website.configuration.user_agent = if !agent.is_empty() { &agent } else { spoof_ua() }.into();
 
     website.crawl().await;
 
+    let mut pages: Vec<String> = Vec::new();
+
     for page in website.get_pages() {
-        pages.push(page.get_url().to_string());
+        pages.push(page.get_url().to_owned());
     }
 
     let web_site = ScanParams {
         pages,
         user_id,
-        domain: domain.into(),
+        domain,
         full: true,
     };
 

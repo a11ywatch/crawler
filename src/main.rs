@@ -1,3 +1,13 @@
+#[cfg(all(
+    not(windows),
+    not(target_os = "android"),
+    not(target_os = "freebsd"),
+    not(target_env = "musl"),
+    feature = "jemalloc"
+))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 use tokio;
 use website_crawler::grpc_start;
 use website_crawler::interface::settings::Settings;

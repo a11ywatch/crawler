@@ -8,21 +8,21 @@ use ua_generator::ua::spoof_ua;
 
 /// crawl all pages and send request as links are found. TODO: move to stream instead of callback uses gRPC callback in spider.
 pub async fn scan(
-    domain: &String,
+    domain: String,
     user_id: u32,
     respect_robots_txt: bool,
-    agent: &String,
+    agent: String,
     subdomains: bool,
     tld: bool,
 ) -> Result<(), core::fmt::Error> {
     let mut client = create_client().await.unwrap();
-    let mut website: Website = Website::new(domain);
+    let mut website: Website = Website::new(&domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
     website.configuration.delay = 0;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.user_agent = if !agent.is_empty() { agent } else { spoof_ua() }.into();
+    website.configuration.user_agent = if !agent.is_empty() { &agent } else { spoof_ua() }.into();
 
     // send scan start tracking user for following request
     monitor_page_start(
@@ -41,7 +41,7 @@ pub async fn scan(
     monitor_page_complete(
         &mut client,
         ScanInitParams {
-            domain: domain.into(),
+            domain: website.domain,
             user_id,
         },
     )
