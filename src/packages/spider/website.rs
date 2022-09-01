@@ -29,8 +29,6 @@ use rayon::prelude::*;
 pub struct Website {
     /// configuration properties for website.
     pub configuration: Configuration,
-    /// this is a start URL given when instanciate with `new`.
-    pub domain: String,
     /// contains all non-visited URL.
     links: HashSet<String>,
     /// contains all visited URL.
@@ -49,14 +47,13 @@ impl Website {
         Self {
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
+            links: HashSet::from([format!("{}/", &domain)]),
             pages: Vec::new(),
             robot_file_parser: None,
-            links: HashSet::from([format!("{}/", &domain)]),
-            domain: domain.into(),
         }
     }
 
-    /// page getter
+    /// page clone
     pub fn get_pages(&self) -> Vec<Page> {
         if !self.pages.is_empty() {
             self.pages.clone()
@@ -81,12 +78,24 @@ impl Website {
     /// configure the robots parser on initial crawl attempt and run
     pub async fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt {
-            let mut robot_file_parser =
-                RobotFileParser::new(&format!("{}/robots.txt", self.domain));
+            let mut robot_file_parser: RobotFileParser = match &self.robot_file_parser {
+                Some(parser) => parser.to_owned(),
+                _ => {
+                    let mut domain = String::from("");
+                    // the first link upon initial config is always the domain
+                    for links in self.links.iter() {
+                        domain = links.clone();
+                    }
+                    let mut robot_file_parser =
+                        RobotFileParser::new(&format!("{}robots.txt", &domain));
+                    robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
 
-            // get the latest robots
-            if robot_file_parser.mtime() == 0 {
-                robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
+                    robot_file_parser
+                }
+            };
+
+            // get the latest robots todo determine time elaspe
+            if robot_file_parser.mtime() <= 4000 {
                 robot_file_parser.read(client).await;
                 self.configuration.delay = robot_file_parser
                     .get_crawl_delay(&robot_file_parser.user_agent) // returns the crawl delay in seconds
@@ -176,6 +185,7 @@ impl Website {
 
                     drop(client);
                     drop(link);
+                    drop(page);
 
                     if let Err(_) = tx.send(links).await {
                         log("receiver dropped", "");
@@ -235,6 +245,7 @@ impl Website {
 
                     drop(client);
                     drop(link);
+                    drop(page);
 
                     if let Err(_) = tx.send(links).await {
                         log("receiver dropped", "");
@@ -307,7 +318,7 @@ async fn crawl() {
 #[tokio::test]
 async fn crawl_invalid() {
     let url = "https://w.com";
-    let mut website: Website = Website::new(url);
+    let mut website: Website = Website::new(&url);
     website.crawl().await;
     let mut uniq = HashSet::new();
     uniq.insert(format!("{}/", url.to_string())); // TODO: remove trailing slash mutate

@@ -24,13 +24,16 @@ pub async fn scan(
     website.configuration.tld = tld;
     website.configuration.user_agent = if !agent.is_empty() { &agent } else { spoof_ua() }.into();
 
+    let rq_start = ScanInitParams {
+        domain,
+        user_id,
+    };
+    let rc_end = rq_start.clone();
+
     // send scan start tracking user for following request
     monitor_page_start(
         &mut client,
-        ScanInitParams {
-            domain: domain.into(),
-            user_id,
-        },
+        rq_start,
     )
     .await
     .unwrap_or_else(|e| println!("{} - crawl start failed.", e));
@@ -40,10 +43,7 @@ pub async fn scan(
     // send scan complete
     monitor_page_complete(
         &mut client,
-        ScanInitParams {
-            domain: website.domain,
-            user_id,
-        },
+        rc_end,
     )
     .await
     .unwrap_or_else(|e| println!("{} - crawl completed failed.", e));
