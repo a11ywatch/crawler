@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.6.15"
+version = "0.6.16"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio web crawler"
@@ -11,7 +11,7 @@ keywords = ["crawler", "web-crawler", "spider", "web-indexer", "site-map-generat
 categories = ["accessibility", "asynchronous"]
 
 [dependencies]
-tokio = { version = "^1.20.1", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
+tokio = { version = "^1.21.0", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
 tonic = { version = "0.8.0" }
 prost = "0.11.0"
 prost-types = "0.11.0"
