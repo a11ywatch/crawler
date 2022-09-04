@@ -5,15 +5,17 @@ use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
+use rayon::prelude::*;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
 use std::time::Duration;
 use tokio;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::task;
 use tokio::time::sleep;
+use tokio_stream::StreamExt;
 use tonic::transport::Channel;
-use rayon::prelude::*;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -176,19 +178,17 @@ impl Website {
                 let client = client.clone();
                 let link = link.clone();
 
-                tokio::spawn(async move {
-                    if delay_enabled {
-                        sleep(Duration::from_millis(delay)).await;
-                    }
-                    let page = Page::new(&link, &client).await;
-                    let links = page.links(subdomains, tld);
+                task::spawn(async move {
+                    {
+                        if delay_enabled {
+                            sleep(Duration::from_millis(delay)).await;
+                        }
+                        let page = Page::new(&link, &client).await;
+                        let links = page.links(subdomains, tld);
 
-                    drop(client);
-                    drop(link);
-                    drop(page);
-
-                    if let Err(_) = tx.send(links).await {
-                        log("receiver dropped", "");
+                        if let Err(_) = tx.send(links).await {
+                            log("receiver dropped", "");
+                        }
                     }
                 });
             }
@@ -215,45 +215,67 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
-        // crawl activity status
-        let mut crawl_valid = true;
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(50);
+            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
+            let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(50); // determine often
 
-            for link in self.links.iter() {
-                if !self.is_allowed(link) {
+            let mut stream = tokio_stream::iter(&self.links);
+
+            let mut crawl_valid = true; // crawl activity status
+
+            while let Some(link) = stream.next().await {
+                if !self.is_allowed(&link) {
                     continue;
+                }
+                if !crawl_valid {
+                    break;
                 }
                 log("fetch", &link);
                 self.links_visited.insert(link.into());
 
-                // can continue processing the crawls
-                if !monitor(rpcx, &link, user_id).await {
-                    crawl_valid = false;
-                    break;
-                }
+                // first spawn
+                let mut rpcx = rpcx.clone();
+                let l = link.clone();
+                let txx = txx.clone();
 
+                // second spawn
                 let tx = tx.clone();
                 let client = client.clone();
                 let link = link.clone();
 
-                tokio::spawn(async move {
-                    let page = Page::new(&link, &client).await;
-                    let links = page.links(subdomains, tld);
+                task::spawn(async move {
+                    {
+                        let x = monitor(&mut rpcx, &l, user_id).await;
 
-                    drop(client);
-                    drop(link);
-                    drop(page);
+                        if let Err(_) = txx.send(x).await {
+                            log("receiver dropped", "");
+                        }
+                    }
+                });
 
-                    if let Err(_) = tx.send(links).await {
-                        log("receiver dropped", "");
+                task::spawn(async move {
+                    {
+                        let page = Page::new(&link, &client).await;
+                        let links = page.links(subdomains, tld);
+
+                        if let Err(_) = tx.send(links).await {
+                            log("receiver dropped", "");
+                        }
                     }
                 });
             }
 
             drop(tx);
+            drop(txx);
+
+            while let Some(msg) = rxx.recv().await {
+                if !msg {
+                    crawl_valid = false;
+                    break;
+                }
+            }
 
             if crawl_valid {
                 let mut new_links: HashSet<String> = HashSet::new();
@@ -266,6 +288,8 @@ impl Website {
             } else {
                 self.links.clear();
             }
+
+            task::yield_now().await;
         }
     }
 
