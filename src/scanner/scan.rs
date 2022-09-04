@@ -22,31 +22,27 @@ pub async fn scan(
     website.configuration.delay = 0;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.user_agent = if !agent.is_empty() { &agent } else { spoof_ua() }.into();
+    website.configuration.user_agent = if !agent.is_empty() {
+        &agent
+    } else {
+        spoof_ua()
+    }
+    .into();
 
-    let rq_start = ScanInitParams {
-        domain,
-        user_id,
-    };
+    let rq_start = ScanInitParams { domain, user_id };
     let rc_end = rq_start.clone();
 
     // send scan start tracking user for following request
-    monitor_page_start(
-        &mut client,
-        rq_start,
-    )
-    .await
-    .unwrap_or_else(|e| println!("{} - crawl start failed.", e));
+    monitor_page_start(&mut client, rq_start)
+        .await
+        .unwrap_or_else(|e| println!("{} - crawl start failed.", e));
 
     website.crawl_grpc(&mut client, user_id).await;
 
     // send scan complete
-    monitor_page_complete(
-        &mut client,
-        rc_end,
-    )
-    .await
-    .unwrap_or_else(|e| println!("{} - crawl completed failed.", e));
+    monitor_page_complete(&mut client, rc_end)
+        .await
+        .unwrap_or_else(|e| println!("{} - crawl completed failed.", e));
 
     Ok(())
 }

@@ -12,6 +12,7 @@ categories = ["accessibility", "asynchronous"]
 
 [dependencies]
 tokio = { version = "^1.21.0", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
+tokio-stream = "0.1.9"
 tonic = { version = "0.8.0" }
 prost = "0.11.0"
 prost-types = "0.11.0"
