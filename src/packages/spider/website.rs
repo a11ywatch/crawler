@@ -215,15 +215,15 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
-        // crawl activity status
-        let mut crawl_valid = true;
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(20);
-            let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(40); // determine often
+            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
+            let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(50); // determine often
 
             let mut stream = tokio_stream::iter(&self.links);
+
+            let mut crawl_valid = true; // crawl activity status
 
             while let Some(link) = stream.next().await {
                 if !self.is_allowed(&link) {
@@ -251,6 +251,7 @@ impl Website {
                     if let Err(_) = txx.send(x).await {
                         log("receiver dropped", "");
                     }
+
                 });
 
                 tokio::spawn(async move {
@@ -260,7 +261,10 @@ impl Website {
                     if let Err(_) = tx.send(links).await {
                         log("receiver dropped", "");
                     }
+
                 });
+
+                tokio::task::yield_now().await;
             }
 
             drop(tx);
@@ -284,6 +288,7 @@ impl Website {
             } else {
                 self.links.clear();
             }
+
         }
     }
 
