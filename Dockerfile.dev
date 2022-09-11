@@ -1,4 +1,4 @@
-FROM rust:bullseye AS builder
+FROM rust:1.63.0-slim AS builder
 
 WORKDIR /app
 COPY . .
@@ -8,11 +8,11 @@ ENV GRPC_HOST_API=api:50051
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    gcc cmake libc6 libssl-dev npm protobuf-compiler libprotobuf-dev
+    cmake libc6 libssl-dev npm protobuf-compiler libprotobuf-dev pkg-config build-essential
 
 RUN cargo install --path .
 
-FROM debian:bullseye-slim
+FROM debian:bullseye-20220822-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
