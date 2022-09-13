@@ -6,7 +6,7 @@
     feature = "jemalloc"
 ))]
 #[global_allocator]
-static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 use tokio;
 use website_crawler::grpc_start;
