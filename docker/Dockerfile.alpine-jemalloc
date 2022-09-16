@@ -1,0 +1,36 @@
+FROM rust:alpine AS builder
+
+WORKDIR /app
+COPY ../ .
+
+ENV GRPC_HOST=0.0.0.0:50055
+ENV GRPC_HOST_API=api:50051
+
+RUN apk add --update \
+    build-base cmake make libc6-compat make npm protoc protobuf-dev pkgconfig openssl openssl-dev libffi-dev zlib-dev musl-dev && \
+    rm -rf /var/cache/apk/*
+
+RUN update-ca-certificates
+
+RUN wget -O - https://github.com/jemalloc/jemalloc/releases/download/5.2.1/jemalloc-5.2.1.tar.bz2 | tar -xj && \
+    cd jemalloc-5.2.1 && \
+    ./configure && \
+    make && \
+    make install
+
+RUN cargo build --release --features jemalloc
+
+FROM alpine
+
+RUN apk upgrade  \
+    && apk add \
+    libc6-compat && \
+    rm -rf /var/cache/apk/*
+
+COPY --from=builder /app/target/release/website_crawler /usr/local/bin/website_crawler
+COPY --from=builder /app/target/release/health_client /usr/local/bin/health_client
+
+ENV GRPC_HOST=0.0.0.0:50055
+ENV GRPC_HOST_API=api:50051
+
+CMD ["website_crawler"]
