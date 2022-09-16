@@ -83,9 +83,13 @@ Assuming [Homebrew](https://brew.sh/) is already installed. (If not, see instruc
 brew install protobuf
 ```
 
+### Features
+
+`jemalloc` - use jemalloc memory allocator (default disabled).
+
 ## About
 
-This crawler is optimized for reduced latency and performance as it can handle over 10,000 pages within seconds.
+This crawler is optimized for reduced latency and uses isolated based concurrency as it can handle over 10,000 pages within seconds.
 In order to receive the links found for the crawler you need to add the [`website.proto`](./proto/website.proto) to your server.
 This is required since every request spawns a thread. Isolating the context drastically improves performance (preventing shared resources / communication ).
 

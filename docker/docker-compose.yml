@@ -2,6 +2,6 @@ version: "3.0"
 services:
   crawler:
     container_name: crawler
-    build: .
+    build: ../
     ports:
       - 50055

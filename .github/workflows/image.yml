@@ -9,7 +9,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-qemu-action@v1
@@ -21,5 +21,6 @@ jobs:
           docker buildx build \
             --memory="2g" \
             -t a11ywatch/crawler:latest \
+            -f docker/Dockerfile \
             --platform linux/amd64,linux/arm64 \
             --push .

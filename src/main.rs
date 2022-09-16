@@ -2,7 +2,6 @@
     not(windows),
     not(target_os = "android"),
     not(target_os = "freebsd"),
-    not(target_env = "musl"),
     feature = "jemalloc"
 ))]
 #[global_allocator]
