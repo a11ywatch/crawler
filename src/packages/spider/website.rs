@@ -49,7 +49,7 @@ impl Website {
         Self {
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
-            links: HashSet::from([format!("{}/", &domain)]),
+            links: HashSet::from([[domain, "/"].concat()]),
             pages: Vec::new(),
             robot_file_parser: None,
         }
@@ -88,8 +88,11 @@ impl Website {
                     for links in self.links.iter() {
                         domain = links.clone();
                     }
-                    let mut robot_file_parser =
-                        RobotFileParser::new(&format!("{}robots.txt", &domain));
+
+                    domain.push_str("robots.txt");
+
+                    let mut robot_file_parser = RobotFileParser::new(&domain);
+                    
                     robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
 
                     robot_file_parser
