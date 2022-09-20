@@ -14,6 +14,9 @@ extern crate url;
 extern crate lazy_static;
 pub use packages::spider;
 
+#[macro_use]
+extern crate string_concat;
+
 // internal packages.
 pub mod interface;
 pub mod packages;

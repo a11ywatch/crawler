@@ -1696,6 +1696,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "string_concat"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c3ee6129eec20fed59acf2e9cfb3ffd20d0bbe39fe334c22af0edc56dfe752"
+
+[[package]]
 name = "syn"
 version = "1.0.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2219,7 +2225,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.6.21"
+version = "0.6.22"
 dependencies = [
  "cc",
  "env_logger",
@@ -2240,6 +2246,7 @@ dependencies = [
  "reqwest",
  "rustc_version",
  "scraper",
+ "string_concat",
  "tokio",
  "tokio-stream",
  "tonic",

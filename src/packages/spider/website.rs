@@ -1,6 +1,6 @@
 use super::black_list::contains;
 use super::configuration::Configuration;
-use super::page::Page;
+use super::page::{build, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
@@ -49,7 +49,7 @@ impl Website {
         Self {
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
-            links: HashSet::from([[domain, "/"].concat()]),
+            links: HashSet::from([string_concat::string_concat!(domain, "/")]),
             pages: Vec::new(),
             robot_file_parser: None,
         }
@@ -62,7 +62,7 @@ impl Website {
         } else {
             self.links_visited
                 .par_iter()
-                .map(|l| Page::build(l, ""))
+                .map(|l| build(l, ""))
                 .collect()
         }
     }
@@ -89,10 +89,9 @@ impl Website {
                         domain = links.clone();
                     }
 
-                    domain.push_str("robots.txt");
+                    let mut robot_file_parser =
+                        RobotFileParser::new(&string_concat::string_concat!(domain, "robots.txt"));
 
-                    let mut robot_file_parser = RobotFileParser::new(&domain);
-                    
                     robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
 
                     robot_file_parser
