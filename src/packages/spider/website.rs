@@ -261,6 +261,7 @@ impl Website {
                     {
                         let page = Page::new(&link, &client).await;
                         let links = page.links(subdomains, tld);
+                        task::yield_now().await;
 
                         if let Err(_) = tx.send(links).await {
                             log("receiver dropped", "");
@@ -284,6 +285,7 @@ impl Website {
 
                 while let Some(msg) = rx.recv().await {
                     new_links.par_extend(msg);
+                    task::yield_now().await;
                 }
 
                 self.links = &new_links - &self.links_visited;
