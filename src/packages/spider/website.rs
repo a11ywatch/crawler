@@ -5,7 +5,6 @@ use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
-use rayon::prelude::*;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
@@ -51,7 +50,7 @@ impl Website {
             links_visited: HashSet::new(),
             links: HashSet::from([string_concat::string_concat!(domain, "/")]),
             pages: Vec::new(),
-            robot_file_parser: None,
+            robot_file_parser: None
         }
     }
 
@@ -61,7 +60,7 @@ impl Website {
             self.pages.clone()
         } else {
             self.links_visited
-                .par_iter()
+                .iter()
                 .map(|l| build(l, ""))
                 .collect()
         }
@@ -217,32 +216,43 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
+        let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(100);
+
+        let handle = task::spawn(async move {
+            let mut crawl_valid = true;
+            while let Some(msg) = rxx.recv().await {
+                if !msg {
+                    crawl_valid = false;
+                    break;
+                }
+            }
+            crawl_valid
+        });
 
         // crawl while links exists
-        while !self.links.is_empty() {
+        while !self.links.is_empty() && !handle.is_finished() {
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
-            let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(50); // determine often
 
             let mut stream = tokio_stream::iter(&self.links);
 
-            let mut crawl_valid = true; // crawl activity status
+            let txx = txx.clone();
 
             while let Some(link) = stream.next().await {
-                if !crawl_valid {
-                    break;
-                }
                 if !self.is_allowed(&link) {
                     continue;
+                }
+                if handle.is_finished() {
+                    break;
                 }
                 log("fetch", &link);
                 self.links_visited.insert(link.into());
 
-                // first spawn
+                // cb spawn
                 let mut rpcx = rpcx.clone();
                 let l = link.clone();
                 let txx = txx.clone();
 
-                // second spawn
+                // link spawn
                 let tx = tx.clone();
                 let client = client.clone();
                 let link = link.clone();
@@ -273,28 +283,20 @@ impl Website {
             drop(tx);
             drop(txx);
 
-            while let Some(msg) = rxx.recv().await {
-                if !msg {
-                    crawl_valid = false;
-                    break;
-                }
+            let mut new_links: HashSet<String> = HashSet::new();
+
+            while let Some(msg) = rx.recv().await {
+                new_links.extend(msg);
+                task::yield_now().await;
             }
 
-            if crawl_valid {
-                let mut new_links: HashSet<String> = HashSet::new();
-
-                while let Some(msg) = rx.recv().await {
-                    new_links.par_extend(msg);
-                    task::yield_now().await;
-                }
-
-                self.links = &new_links - &self.links_visited;
-            } else {
-                self.links.clear();
-            }
-
+            self.links = &new_links - &self.links_visited;
             task::yield_now().await;
         }
+
+        drop(txx);
+        // todo: possibly clear all links to reset to base
+    
     }
 
     /// return `true` if URL:

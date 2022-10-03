@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.6.26"
+version = "0.6.29"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -20,13 +20,12 @@ reqwest = { version = "0.11.11", features = ["brotli", "native-tls-alpn"] }
 scraper = "0.13"
 url = "2.2.2"
 regex = { version = "^1.5.0", optional = true }
-hashbrown = { version = "0.12.3", features = [ "rayon" ] }
+hashbrown = { version = "0.12.3" }
 log = "0.4.16"
 lazy_static = "1.4.0"
 ua_generator = "0.3.0"
 percent-encoding = "2.1.0"
 env_logger = "0.9.0"
-rayon = "1.5.3"
 string_concat = "0.0.1"
 
 [target.'cfg(all(not(target_os = "android"), not(target_os = "freebsd")))'.dependencies]
