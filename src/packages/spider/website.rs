@@ -228,11 +228,11 @@ impl Website {
             let mut crawl_valid = true; // crawl activity status
 
             while let Some(link) = stream.next().await {
-                if !self.is_allowed(&link) {
-                    continue;
-                }
                 if !crawl_valid {
                     break;
+                }
+                if !self.is_allowed(&link) {
+                    continue;
                 }
                 log("fetch", &link);
                 self.links_visited.insert(link.into());
