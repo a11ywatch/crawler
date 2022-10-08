@@ -1,5 +1,5 @@
 [package]
-name = "@a11ywatch/crawler"
+name = "website_crawler"
 version = "0.6.32"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
