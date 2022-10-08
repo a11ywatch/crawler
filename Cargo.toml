@@ -1,6 +1,6 @@
 [package]
-name = "website_crawler"
-version = "0.6.31"
+name = "@a11ywatch/crawler"
+version = "0.6.32"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
