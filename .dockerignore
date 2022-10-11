@@ -1,6 +1,11 @@
 target
 tests
 Dockerfile.dev
-docker-compose.yml
+docker
 .circleci
 .github
+package-lock.json
+package.json
+pre-install.js
+start.js
+uninstall.js

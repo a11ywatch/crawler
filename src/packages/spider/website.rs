@@ -238,24 +238,26 @@ impl Website {
             let txx = txx.clone();
 
             while let Some(link) = stream.next().await {
-                if !self.is_allowed(&link) {
-                    continue;
-                }
                 if handle.is_finished() {
                     break;
                 }
-                log("fetch", &link);
+                if !self.is_allowed(&link) {
+                    continue;
+                }
                 self.links_visited.insert(link.into());
+                log("fetch", link);
 
                 // cb spawn
                 let mut rpcx = rpcx.clone();
                 let l = link.clone();
                 let txx = txx.clone();
+                task::yield_now().await;
 
                 // link spawn
                 let tx = tx.clone();
                 let client = client.clone();
                 let link = link.clone();
+                task::yield_now().await;
 
                 task::spawn(async move {
                     {
