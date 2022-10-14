@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.6.34"
+version = "0.6.36"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -12,7 +12,7 @@ categories = ["accessibility", "asynchronous"]
 
 [dependencies]
 tokio = { version = "^1.21.2", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
-tokio-stream = "0.1.10"
+tokio-stream = "0.1.11"
 tonic = { version = "0.8.2" }
 prost = "0.11.0"
 prost-types = "0.11.0"
@@ -37,7 +37,7 @@ name = "health_client"
 path = "src/hc_client.rs"
 
 [build-dependencies]
-tonic-build = { version = "0.8.0" }
+tonic-build = { version = "0.8.2" }
 quote = "1.0.18"
 failure_derive = "0.1.8"
 cc = "^1.0.13"

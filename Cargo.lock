@@ -1757,9 +1757,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6edf2d6bc038a43d31353570e27270603f4648d18f5ed10c0e179abe43255af"
+checksum = "d660770404473ccd7bc9f8b28494a811bc18542b915c0855c51e8f419d5223ce"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -1928,7 +1928,7 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 [[package]]
 name = "ua_generator"
 version = "0.3.2"
-source = "git+https://github.com/a11ywatch/ua_generator.git#282de8fb91993e70ba3b6bc7fe5b2d548fc909bf"
+source = "git+https://github.com/a11ywatch/ua_generator.git#0d0aac19bb6b0d6d0a7b875e512864788a07f7cd"
 dependencies = [
  "fastrand",
  "serde",
@@ -2144,7 +2144,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.6.34"
+version = "0.6.36"
 dependencies = [
  "cc",
  "env_logger",
