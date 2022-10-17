@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.6.36"
+version = "0.6.37"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -46,10 +46,6 @@ fs_extra = "^1.1"
 
 [dev-dependencies]
 once_cell = "1.2.0"
-
-[profile.release]
-codegen-units = 1
-lto = "fat"
 
 [features]
 jemalloc = ["jemallocator", "jemalloc-sys"]
