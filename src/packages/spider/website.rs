@@ -155,7 +155,7 @@ impl Website {
             .await;
     }
 
-    /// Start to crawl website concurrently using gRPC callback
+    /// Start to crawl website concurrently
     async fn crawl_concurrent(&mut self, client: &Client) {
         // crawl delay between
         let delay = self.configuration.delay;
@@ -273,7 +273,6 @@ impl Website {
                     {
                         let page = Page::new(&link, &client).await;
                         let links = page.links(subdomains, tld);
-                        task::yield_now().await;
 
                         if let Err(_) = tx.send(links).await {
                             log("receiver dropped", "");
@@ -296,9 +295,7 @@ impl Website {
             task::yield_now().await;
         }
 
-        drop(txx);
-        // todo: possibly clear all links to reset to base
-    
+        drop(txx);    
     }
 
     /// return `true` if URL:
