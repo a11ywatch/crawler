@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rust:1.63.0-alpine3.16 AS builder
+FROM --platform=$BUILDPLATFORM rust:1.65.0-alpine3.16 AS builder
 
 WORKDIR /app
 COPY ../ .

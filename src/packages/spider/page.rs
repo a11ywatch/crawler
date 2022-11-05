@@ -24,7 +24,7 @@ const MEDIA_SELECTOR_STATIC: &str = r#"[href$=".html"] [href$=".htm"] [href$=".a
 
 /// build absolute page selectors
 fn build_absolute_selectors(url: &str) -> String {
-    string_concat::string_concat!("a[href^=", r#"""#, url, r#"""#, "]", MEDIA_IGNORE_SELECTOR)
+    string_concat!("a[href^=", r#"""#, url, r#"""#, "]", MEDIA_IGNORE_SELECTOR)
 }
 
 /// get the host name for url without tld
@@ -83,7 +83,7 @@ impl Page {
             let scheme = self.base.scheme();
             // . extension
             let tlds = if tld {
-                string_concat::string_concat!(
+                string_concat!(
                     "a[href^=",
                     r#"""#,
                     scheme,
@@ -126,7 +126,7 @@ impl Page {
             };
 
             // static html group parse
-            Selector::parse(&string_concat::string_concat!(
+            Selector::parse(&string_concat!(
                 tlds,
                 MEDIA_SELECTOR_RELATIVE,
                 ",",
@@ -143,7 +143,7 @@ impl Page {
             .unwrap()
         } else {
             let absolute_selector = build_absolute_selectors(url);
-            let static_html_selector = string_concat::string_concat!(
+            let static_html_selector = string_concat!(
                 MEDIA_SELECTOR_RELATIVE,
                 " ",
                 MEDIA_SELECTOR_STATIC,
@@ -154,7 +154,7 @@ impl Page {
                 MEDIA_SELECTOR_STATIC
             );
 
-            Selector::parse(&string_concat::string_concat!(
+            Selector::parse(&string_concat!(
                 MEDIA_SELECTOR_RELATIVE,
                 ",",
                 absolute_selector,

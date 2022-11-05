@@ -9,18 +9,35 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
+      - uses: docker/setup-qemu-action@v2.1.0
+      - uses: docker/setup-buildx-action@v2.2.1
       - uses: actions/checkout@v3
-      - uses: docker/setup-qemu-action@v1
-      - uses: docker/setup-buildx-action@v1
       - name: login to docker hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-      - name: build the image
+      - name: build the debian image
         run: |
           docker buildx build \
-            --memory="2g" \
+            --memory="1.5g" \
             -t a11ywatch/crawler:latest \
+            -f docker/Dockerfile.debian \
+            --platform linux/amd64,linux/arm64 \
+            --push .
+
+  build-alpine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-qemu-action@v2.1.0
+      - uses: docker/setup-buildx-action@v2.2.1
+      - uses: actions/checkout@v3
+      - name: login to docker hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: build alpine image
+        run: |
+          docker buildx build \
+            --memory="1.5g" \
+            -t a11ywatch/crawler:alpine \
             -f docker/Dockerfile \
             --platform linux/amd64,linux/arm64 \
             --push .

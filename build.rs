@@ -1,11 +1,6 @@
 use std::env;
 use std::process::Command;
 
-// macro_rules! p {
-//     ($($tokens: tt)*) => {
-//         println!("cargo:warning={}", format!($($tokens)*))
-//     }
-// }
 
 #[allow(missing_docs)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
