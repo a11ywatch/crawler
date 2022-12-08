@@ -66,10 +66,12 @@ pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
     link: &String,
     user_id: u32,
+    html: String,
 ) -> bool {
     let request = tonic::Request::new(ScanParams {
         pages: vec![link.clone()],
         user_id,
+        html,
         ..Default::default()
     });
     // let mut stream = client.scan_stream(request).await.unwrap().into_inner();

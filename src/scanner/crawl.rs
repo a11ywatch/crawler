@@ -38,6 +38,7 @@ pub async fn crawl(
         user_id,
         domain,
         full: true,
+        html: String::from(""),
     };
 
     monitor_page_async(web_site)

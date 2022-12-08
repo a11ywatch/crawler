@@ -249,7 +249,6 @@ impl Website {
 
                 // cb spawn
                 let mut rpcx = rpcx.clone();
-                let l = link.clone();
                 let txx = txx.clone();
                 task::yield_now().await;
 
@@ -257,22 +256,21 @@ impl Website {
                 let tx = tx.clone();
                 let client = client.clone();
                 let link = link.clone();
-                task::yield_now().await;
-
-                task::spawn(async move {
-                    {
-                        let x = monitor(&mut rpcx, &l, user_id).await;
-
-                        if let Err(_) = txx.send(x).await {
-                            log("receiver dropped", "");
-                        }
-                    }
-                });
 
                 task::spawn(async move {
                     {
                         let page = Page::new(&link, &client).await;
                         let links = page.links(subdomains, tld);
+
+                        task::spawn(async move {
+                            {
+                                let x = monitor(&mut rpcx, &link, user_id, page.html).await;
+        
+                                if let Err(_) = txx.send(x).await {
+                                    log("receiver dropped", "");
+                                }
+                            }
+                        });
 
                         if let Err(_) = tx.send(links).await {
                             log("receiver dropped", "");

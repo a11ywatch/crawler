@@ -10,7 +10,7 @@ pub struct Page {
     /// URL of this page.
     url: String,
     /// HTML parsed with [scraper](https://crates.io/crates/scraper) lib. The html is not stored and only used to parse links.
-    html: String,
+    pub html: String,
     /// Base absolute url for page.
     base: Url,
 }
@@ -69,11 +69,6 @@ impl Page {
     /// HTML returned from Scraper.
     fn parse_html(&self) -> Html {
         Html::parse_document(&self.html)
-    }
-
-    /// Clear the html for the page.
-    pub fn clear_html(&mut self) {
-        self.html.clear();
     }
 
     /// html selector for valid web pages for domain.
