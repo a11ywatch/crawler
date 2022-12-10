@@ -19,7 +19,7 @@ jobs:
       - name: build the debian image
         run: |
           docker buildx build \
-            --memory="2g" \
+            --memory="1g" \
             -t a11ywatch/crawler:latest \
             -f docker/Dockerfile.debian \
             --platform linux/amd64,linux/arm64 \
