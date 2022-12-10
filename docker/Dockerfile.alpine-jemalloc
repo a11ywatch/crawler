@@ -24,7 +24,7 @@ FROM alpine
 
 RUN apk upgrade  \
     && apk add \
-    libc6-compat && \
+    libc6-compat openssl && \
     rm -rf /var/cache/apk/*
 
 COPY --from=builder /app/target/release/website_crawler /usr/local/bin/website_crawler

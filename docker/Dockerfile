@@ -16,7 +16,7 @@ FROM --platform=$BUILDPLATFORM alpine:3.16
 
 RUN apk upgrade  \
     && apk add \
-    libc6-compat && \
+    libc6-compat openssl && \
     rm -rf /var/cache/apk/*
 
 COPY --from=builder /usr/local/cargo/bin/website_crawler /usr/local/bin/website_crawler
