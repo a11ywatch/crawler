@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rust:1.65.0-alpine3.16 AS builder
+FROM rust:1.65.0-alpine3.16 AS builder
 
 WORKDIR /app
 COPY ../ .
@@ -12,7 +12,7 @@ RUN apk add --update \
 
 RUN cargo install --path .
 
-FROM --platform=$BUILDPLATFORM alpine:3.16
+FROM alpine:3.16
 
 RUN apk upgrade  \
     && apk add \
