@@ -2,8 +2,8 @@ version: 2.1
 jobs:
   crawler:
     machine:
-      image: ubuntu-2004:2022.10.1
-    resource_class: arm.large
+      image: ubuntu-2004:2022.07.1
+    resource_class: xlarge
     environment:
       RUSTFLAGS: "-D warnings"
       IMAGE_NAME: a11ywatch/crawler
@@ -26,7 +26,7 @@ jobs:
           name: Install buildx
           command: |
             curl --output docker-buildx --silent --show-error --location --fail --retry 3 \
-            "https://github.com/docker/buildx/releases/download/v0.9.1/buildx-v0.9.1.linux-arm64"
+            "https://github.com/docker/buildx/releases/download/v0.9.1/buildx-v0.9.1.linux-amd64"
 
             mkdir -p ~/.docker/cli-plugins
 
@@ -40,7 +40,9 @@ jobs:
             chmod +x rustup.sh
             ./rustup.sh -y
             source "$HOME"/.cargo/env
+            sudo apt-get update
             sudo apt-get -y --no-install-recommends install libssl-dev qemu gcc-aarch64-linux-gnu qemu-user-static
+
       - run: 
           name: Test image
           command: cargo test --all-features
@@ -51,12 +53,14 @@ jobs:
 
       - run: 
           name: Build and Push Latest (Alpine)
+          no_output_timeout: 30m
           command: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest  --push . -f docker/Dockerfile
 
       - run: 
           name: Build and Push (Debian)
+          no_output_timeout: 30m
           command: |
-            docker buildx build --memory="3.5g" --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
+            docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
 
       - save_cache:
           paths:
