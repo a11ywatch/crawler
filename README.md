@@ -64,6 +64,8 @@ In order to build `crawler` locally >= 0.5.0, you need the `protoc` Protocol Buf
 
 #### Ubuntu
 
+proto compiler needs to be at v3 in order to compile. Ubuntu 18+ auto installs.
+
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y protobuf-compiler libprotobuf-dev

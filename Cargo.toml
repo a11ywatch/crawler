@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.6.45"
+version = "0.6.46"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -13,9 +13,9 @@ categories = ["accessibility", "asynchronous"]
 [dependencies]
 tokio = { version = "^1.23.0", features = [ "rt-multi-thread", "net", "macros", "sync", "time" ] }
 tokio-stream = "0.1.11"
-tonic = { version = "0.8.2" }
-prost = "0.11.0"
-prost-types = "0.11.0"
+tonic = { version = "0.8.3" }
+prost = "0.11.3"
+prost-types = "0.11.2"
 reqwest = { version = "0.11.12", features = ["brotli", "native-tls-alpn"] }
 scraper = "0.13"
 url = "2.3.1"
@@ -37,7 +37,7 @@ name = "health_client"
 path = "src/hc_client.rs"
 
 [build-dependencies]
-tonic-build = { version = "0.8.2" }
+tonic-build = { version = "0.8.4", features = ["prost"] }
 quote = "1.0.18"
 failure_derive = "0.1.8"
 cc = "^1.0.13"
