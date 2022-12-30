@@ -1942,8 +1942,8 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "ua_generator"
-version = "0.3.2"
-source = "git+https://github.com/a11ywatch/ua_generator.git#461deb9a4466349e6ba5152b818cee34988c9904"
+version = "0.3.5"
+source = "git+https://github.com/a11ywatch/ua_generator.git#0f0d066bc989d757b2868a782bf6e06cb0555fc9"
 dependencies = [
  "fastrand",
  "serde",
@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.6.46"
+version = "0.6.47"
 dependencies = [
  "cc",
  "env_logger",
