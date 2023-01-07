@@ -2,17 +2,17 @@
 
 [![A11yWatch](https://circleci.com/gh/a11ywatch/crawler.svg?style=svg)](https://circleci.com/gh/a11ywatch/crawler)
 
-A gRPC web indexer turbo charged for performance.
+A [gRPC](https://grpc.io/) web indexer turbo charged for performance.
 
 ## Getting Started
 
 Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or Docker.
 
-This project requires that you start up another gRPC server on port `50051` following the [proto spec](https://github.com/A11yWatch/crawler/blob/main/proto/website.proto).
+This project requires that you start up another gRPC server on port `50051` following the [proto spec](https://github.com/a11ywatch/protobuf/blob/main/website.proto).
 
 The user agent is spoofed on each crawl to a random agent and the indexer extends [spider](https://github.com/madeindjs/spider) as the base.
 
-Make sure to have `npm` installed in order to build the `proto` defs from `@a11ywatch/protos`.
+Make sure to have `npm` installed in order to build the `proto` defs from [`@a11ywatch/protos`](https://github.com/a11ywatch/protobuf/blob/main/README.md).
 
 1. `cargo run` or `docker compose up`
 
