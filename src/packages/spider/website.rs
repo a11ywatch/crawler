@@ -38,6 +38,8 @@ pub struct Website {
     pages: Vec<Page>,
     /// Robot.txt parser holder.
     robot_file_parser: Option<RobotFileParser>,
+    /// https transport type used (determine alternative transport).
+    https: bool
 }
 
 type Message = HashSet<String>;
@@ -50,7 +52,8 @@ impl Website {
             links_visited: HashSet::new(),
             links: HashSet::from([string_concat!(domain, "/")]),
             pages: Vec::new(),
-            robot_file_parser: None
+            robot_file_parser: None,
+            https: domain.starts_with("https")
         }
     }
 
@@ -163,6 +166,7 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
+        let https = self.https;
 
         // crawl while links exists
         while !self.links.is_empty() {
@@ -185,7 +189,7 @@ impl Website {
                             sleep(Duration::from_millis(delay)).await;
                         }
                         let page = Page::new(&link, &client).await;
-                        let links = page.links(subdomains, tld);
+                        let links = page.links(subdomains, tld, https);
 
                         if let Err(_) = tx.send(links).await {
                             log("receiver dropped", "");
@@ -216,6 +220,7 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
+        let https = self.https;
         let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(100);
 
         let handle = task::spawn(async move {
@@ -245,7 +250,7 @@ impl Website {
                     continue;
                 }
                 self.links_visited.insert(link.into());
-                log("fetch", link);
+                log("fetch", &link);
 
                 // cb spawn
                 let mut rpcx = rpcx.clone();
@@ -260,7 +265,7 @@ impl Website {
                 task::spawn(async move {
                     {
                         let page = Page::new(&link, &client).await;
-                        let links = page.links(subdomains, tld);
+                        let links = page.links(subdomains, tld, https);
 
                         task::spawn(async move {
                             {
