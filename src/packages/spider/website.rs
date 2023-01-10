@@ -37,9 +37,7 @@ pub struct Website {
     /// contains page visited
     pages: Vec<Page>,
     /// Robot.txt parser holder.
-    robot_file_parser: Option<RobotFileParser>,
-    /// https transport type used (determine alternative transport).
-    https: bool
+    robot_file_parser: Option<RobotFileParser>
 }
 
 type Message = HashSet<String>;
@@ -52,8 +50,7 @@ impl Website {
             links_visited: HashSet::new(),
             links: HashSet::from([string_concat!(domain, "/")]),
             pages: Vec::new(),
-            robot_file_parser: None,
-            https: domain.starts_with("https")
+            robot_file_parser: None
         }
     }
 
@@ -166,7 +163,6 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
-        let https = self.https;
 
         // crawl while links exists
         while !self.links.is_empty() {
@@ -189,7 +185,7 @@ impl Website {
                             sleep(Duration::from_millis(delay)).await;
                         }
                         let page = Page::new(&link, &client).await;
-                        let links = page.links(subdomains, tld, https);
+                        let links = page.links(subdomains, tld);
 
                         if let Err(_) = tx.send(links).await {
                             log("receiver dropped", "");
@@ -220,7 +216,6 @@ impl Website {
         // crawl page walking
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
-        let https = self.https;
         let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(100);
 
         let handle = task::spawn(async move {
@@ -265,7 +260,7 @@ impl Website {
                 task::spawn(async move {
                     {
                         let page = Page::new(&link, &client).await;
-                        let links = page.links(subdomains, tld, https);
+                        let links = page.links(subdomains, tld);
 
                         task::spawn(async move {
                             {

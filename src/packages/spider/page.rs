@@ -23,13 +23,25 @@ const MEDIA_SELECTOR_RELATIVE: &str = r#"a[href^="/"]:not([href$=".ico"]):not([h
 const MEDIA_SELECTOR_STATIC: &str = r#"[href$=".html"] [href$=".htm"] [href$=".asp"] [href$=".aspx"] [href$=".php"] [href$=".jps"] [href$=".jpsx"]"#;
 
 /// build absolute page selectors
-fn build_absolute_selectors(url: &str, https: bool) -> String {
-    // todo: remove replace handling url
-    if https {
-        string_concat!("a[href^=", r#"""#, url, r#"""#, "],", "a[href^=", r#"""#, url.replacen("https", "http", 1), r#"""#, "]", MEDIA_IGNORE_SELECTOR)
-    } else {
-        string_concat!("a[href^=", r#"""#, url, r#"""#, "],", "a[href^=", r#"""#, url.replacen("http", "https", 1), r#"""#, "]", MEDIA_IGNORE_SELECTOR)
-    }
+fn build_absolute_selectors(url: &str) -> String {
+    // handle unsecure and secure transports
+    string_concat!(
+        "a[href^=",
+        r#"""#,
+        if url.starts_with("https") {
+            url.replacen("https://", "http://", 1)
+        } else {
+            url.replacen("http://", "https://", 1)
+        },
+        r#"""#,
+        "],",
+        "a[href^=",
+        r#"""#,
+        url,
+        r#"""#,
+        "]",
+        MEDIA_IGNORE_SELECTOR
+    )
 }
 
 /// get the host name for url without tld
@@ -77,7 +89,7 @@ impl Page {
     }
 
     /// html selector for valid web pages for domain.
-    pub fn get_page_selectors(&self, url: &str, subdomains: bool, tld: bool, https: bool) -> Selector {
+    pub fn get_page_selectors(&self, url: &str, subdomains: bool, tld: bool) -> Selector {
         if tld || subdomains {
             let dname = domain_name(&self.base);
             let scheme = self.base.scheme();
@@ -99,7 +111,7 @@ impl Page {
                 "".to_string()
             };
 
-            let absolute_selector = build_absolute_selectors(url, https);
+            let absolute_selector = build_absolute_selectors(url);
             // absolute urls with subdomains
             let absolute_selector = &if subdomains {
                 string_concat::string_concat!(
@@ -142,7 +154,7 @@ impl Page {
             ))
             .unwrap()
         } else {
-            let absolute_selector = build_absolute_selectors(url, https);
+            let absolute_selector = build_absolute_selectors(url);
             let static_html_selector = string_concat!(
                 MEDIA_SELECTOR_RELATIVE,
                 " ",
@@ -166,8 +178,8 @@ impl Page {
     }
 
     /// Find all href links and return them using CSS selectors.
-    pub fn links(&self, subdomains: bool, tld: bool, https: bool) -> HashSet<String> {
-        let selector = self.get_page_selectors(&self.url, subdomains, tld, https);
+    pub fn links(&self, subdomains: bool, tld: bool) -> HashSet<String> {
+        let selector = self.get_page_selectors(&self.url, subdomains, tld);
         let html = self.parse_html();
         let anchors = html.select(&selector);
 
@@ -220,7 +232,7 @@ async fn parse_links() {
 
     let link_result = "https://choosealicense.com/";
     let page: Page = Page::new(&link_result, &client).await;
-    let links = page.links(false, false, true);
+    let links = page.links(false, false);
 
     assert!(
         links.contains(&"https://choosealicense.com/about/".to_string()),
