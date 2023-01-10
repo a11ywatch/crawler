@@ -220,7 +220,7 @@ async fn parse_links() {
 
     let link_result = "https://choosealicense.com/";
     let page: Page = Page::new(&link_result, &client).await;
-    let links = page.links(false, false, false);
+    let links = page.links(false, false, true);
 
     assert!(
         links.contains(&"https://choosealicense.com/about/".to_string()),
