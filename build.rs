@@ -5,18 +5,6 @@ use std::process::Command;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
-    // let npm = Command::new("npm")
-    //     .args(["-v"])
-    //     .output()
-    //     .unwrap();
-
-    // if !npm.stdout.is_empty() {
-    //     let npm = String::from_utf8(npm.stdout).unwrap();
-    //     if npm.is_empty() {
-    //         p!("npm is required for installing proto files!");
-    //     }
-    // }
-
     Command::new("npm")
         .args(["i", "--prefix", &out_dir, "@a11ywatch/protos"])
         .output()

@@ -22,6 +22,8 @@ pub struct Configuration {
     pub user_agent: String,
     /// Polite crawling delay in milli seconds.
     pub delay: u64,
+    /// proxy to use for request [todo: make breaking API change for handling].
+    pub proxy: String,
 }
 
 impl Configuration {

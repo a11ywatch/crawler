@@ -6,7 +6,7 @@ use crate::packages::spider::website::Website;
 use crate::rpc::client::website::ScanInitParams;
 use ua_generator::ua::spoof_ua;
 
-/// crawl all pages and send request as links are found. TODO: move to stream instead of callback uses gRPC callback in spider.
+/// crawl all pages and stream request as links are found.
 pub async fn scan(
     domain: String,
     user_id: u32,
@@ -14,6 +14,7 @@ pub async fn scan(
     agent: String,
     subdomains: bool,
     tld: bool,
+    proxy: String,
 ) -> Result<(), core::fmt::Error> {
     let mut client = create_client().await.unwrap();
     let mut website: Website = Website::new(&domain);
@@ -22,6 +23,7 @@ pub async fn scan(
     website.configuration.delay = 0;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
+    website.configuration.proxy = proxy;
     website.configuration.user_agent = if !agent.is_empty() {
         &agent
     } else {
@@ -32,7 +34,7 @@ pub async fn scan(
     let rq_start = ScanInitParams { domain, user_id };
     let rc_end = rq_start.clone();
 
-    // send scan start tracking user for following request
+    // send scan start tracking user for following request [todo: send agent used if randomized]
     monitor_page_start(&mut client, rq_start)
         .await
         .unwrap_or_else(|e| println!("{} - crawl start failed.", e));

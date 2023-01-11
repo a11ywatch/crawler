@@ -2,7 +2,7 @@ use super::black_list::contains;
 use super::configuration::Configuration;
 use super::page::{build, Page};
 use super::robotparser::RobotFileParser;
-use super::utils::log;
+use super::utils::{log};
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
@@ -15,6 +15,7 @@ use tokio::task;
 use tokio::time::sleep;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
+use url::Url;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -50,7 +51,7 @@ impl Website {
             links_visited: HashSet::new(),
             links: HashSet::from([string_concat!(domain, "/")]),
             pages: Vec::new(),
-            robot_file_parser: None
+            robot_file_parser: None,
         }
     }
 
@@ -59,10 +60,7 @@ impl Website {
         if !self.pages.is_empty() {
             self.pages.clone()
         } else {
-            self.links_visited
-                .iter()
-                .map(|l| build(l, ""))
-                .collect()
+            self.links_visited.iter().map(|l| build(l, "")).collect()
         }
     }
 
@@ -120,12 +118,34 @@ impl Website {
                 headers
             };
         }
-        Client::builder()
+        let mut client = Client::builder()
             .default_headers(HEADERS.clone())
             .user_agent(&self.configuration.user_agent)
-            .brotli(true)
-            .build()
-            .unwrap_or_default()
+            .brotli(true);
+
+        if !self.configuration.proxy.is_empty() {
+            match reqwest::Proxy::all(&self.configuration.proxy) {
+                Ok(proxy) => {
+                    match Url::parse(&self.configuration.proxy) {
+                        Ok(url) => {
+                            let password = match &url.password() {
+                                Some(pass) => pass,
+                                _ => "",
+                            };
+                            client = client.proxy(proxy.basic_auth(&url.username(), &password));
+                        }
+                        _ => {
+                            client = client.proxy(proxy);
+                        },
+                    }
+                }
+                _ => {
+                    log("proxy connect error", "");
+                }
+            };
+        }
+
+        client.build().unwrap_or_default()
     }
 
     /// setup config for crawl
@@ -147,7 +167,7 @@ impl Website {
     pub async fn crawl_grpc(
         &mut self,
         rpc_client: &mut WebsiteServiceClient<Channel>,
-        user_id: u32,
+        user_id: u32
     ) {
         let client = self.setup().await;
 
@@ -265,7 +285,7 @@ impl Website {
                         task::spawn(async move {
                             {
                                 let x = monitor(&mut rpcx, &link, user_id, page.html).await;
-        
+
                                 if let Err(_) = txx.send(x).await {
                                     log("receiver dropped", "");
                                 }
@@ -293,7 +313,7 @@ impl Website {
             task::yield_now().await;
         }
 
-        drop(txx);    
+        drop(txx);
     }
 
     /// return `true` if URL:

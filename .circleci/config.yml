@@ -3,12 +3,13 @@ jobs:
   crawler:
     machine:
       image: ubuntu-2004:2022.07.1
-    resource_class: xlarge
+    resource_class: large
     environment:
       RUSTFLAGS: "-D warnings"
       IMAGE_NAME: a11ywatch/crawler
       DOCKER_BUILDKIT: 1
       BUILDX_PLATFORMS: linux/amd64,linux/arm64
+
     steps:
       - checkout
 
@@ -68,11 +69,11 @@ jobs:
           command: |
             docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
 
-
       - save_cache:
           paths:
             - ~/usr/local/lib/target
           key: node-v1-{{ .Branch }}-{{ checksum "Cargo.lock" }}
+
 workflows:
   build_and_test:
     jobs:
