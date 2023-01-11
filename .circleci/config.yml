@@ -3,7 +3,7 @@ jobs:
   crawler:
     machine:
       image: ubuntu-2004:2022.07.1
-    resource_class: large
+    resource_class: xlarge
     environment:
       RUSTFLAGS: "-D warnings"
       IMAGE_NAME: a11ywatch/crawler
