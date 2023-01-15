@@ -2,7 +2,7 @@ use super::black_list::contains;
 use super::configuration::Configuration;
 use super::page::{build, Page};
 use super::robotparser::RobotFileParser;
-use super::utils::{log};
+use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
@@ -38,7 +38,7 @@ pub struct Website {
     /// contains page visited
     pages: Vec<Page>,
     /// Robot.txt parser holder.
-    robot_file_parser: Option<RobotFileParser>
+    robot_file_parser: Option<RobotFileParser>,
 }
 
 type Message = HashSet<String>;
@@ -125,20 +125,18 @@ impl Website {
 
         if !self.configuration.proxy.is_empty() {
             match reqwest::Proxy::all(&self.configuration.proxy) {
-                Ok(proxy) => {
-                    match Url::parse(&self.configuration.proxy) {
-                        Ok(url) => {
-                            let password = match &url.password() {
-                                Some(pass) => pass,
-                                _ => "",
-                            };
-                            client = client.proxy(proxy.basic_auth(&url.username(), &password));
-                        }
-                        _ => {
-                            client = client.proxy(proxy);
-                        },
+                Ok(proxy) => match Url::parse(&self.configuration.proxy) {
+                    Ok(url) => {
+                        let password = match &url.password() {
+                            Some(pass) => pass,
+                            _ => "",
+                        };
+                        client = client.proxy(proxy.basic_auth(&url.username(), &password));
                     }
-                }
+                    _ => {
+                        client = client.proxy(proxy);
+                    }
+                },
                 _ => {
                     log("proxy connect error", "");
                 }
@@ -167,7 +165,7 @@ impl Website {
     pub async fn crawl_grpc(
         &mut self,
         rpc_client: &mut WebsiteServiceClient<Channel>,
-        user_id: u32
+        user_id: u32,
     ) {
         let client = self.setup().await;
 

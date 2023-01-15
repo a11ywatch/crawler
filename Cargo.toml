@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.6.54"
+version = "0.6.55"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -43,6 +43,7 @@ failure_derive = "0.1.8"
 cc = "^1.0.13"
 rustc_version = "0.4.0"
 fs_extra = "^1.1"
+os_info = "3"
 
 [features]
 jemalloc = ["jemallocator", "jemalloc-sys"]

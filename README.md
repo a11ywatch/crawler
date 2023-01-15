@@ -146,6 +146,7 @@ If you need help implementing the gRPC server to receive the pages or links when
 ## TODO
 
 1. Allow gRPC server port setting or change to direct url:port combo.
+1. add protoc pre-compiled binary [installation](https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os).
 
 ## LICENSE
 

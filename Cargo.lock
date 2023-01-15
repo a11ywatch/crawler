@@ -949,6 +949,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "os_info"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4750134fb6a5d49afc80777394ad5d95b04bc12068c6abb92fae8f43817270f"
+dependencies = [
+ "log",
+ "serde",
+ "winapi",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2193,7 +2204,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.6.54"
+version = "0.6.55"
 dependencies = [
  "cc",
  "env_logger",
@@ -2204,6 +2215,7 @@ dependencies = [
  "jemallocator",
  "lazy_static",
  "log",
+ "os_info",
  "percent-encoding",
  "prost",
  "prost-types",
