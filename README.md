@@ -20,6 +20,42 @@ Make sure to have `npm` installed in order to build the `proto` defs from [`@a11
 
 You can install easily with the following:
 
+### Cargo
+
+The [crate](https://crates.io/crates/website_crawler) is available to setup a gRPC server within rust projects.
+
+```sh
+cargo install website_crawler
+```
+
+### Docker
+
+You can use also use the docker image at [a11ywatch/crawler](https://hub.docker.com/repository/docker/a11ywatch/crawler).
+
+Set the `CRAWLER_IMAGE` env var to `darwin-arm64` to get the native m1 mac image.
+
+```yml
+crawler:
+  container_name: crawler
+  image: "a11ywatch/crawler:${CRAWLER_IMAGE:-latest}"
+  ports:
+    - 50055
+```
+
+### Node / Bun
+
+We also release the package to npm [@a11ywatch/crawler](https://www.npmjs.com/package/@a11ywatch/crawler).
+
+```sh
+npm i @a11ywatch/crawler
+```
+
+After import at the top of your project to start the gRPC server or run node directly against the module.
+
+```ts
+import "@a11ywatch/crawler";
+```
+
 ## Example
 
 This is a basic blocking example crawling a web page, add spider to your `Cargo.toml`:
@@ -62,42 +98,6 @@ website.configuration.proxy = "http://username:password@localhost:1234";
 website.configuration.delay = 0; // Defaults to 250 ms
 website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version
 website.crawl().await;
-```
-
-### Cargo
-
-The [crate](https://crates.io/crates/website_crawler) is available to setup a gRPC server within rust projects.
-
-```sh
-cargo install website_crawler
-```
-
-### Docker
-
-You can use also use the docker image at [a11ywatch/crawler](https://hub.docker.com/repository/docker/a11ywatch/crawler).
-
-Set the `CRAWLER_IMAGE` env var to `darwin-arm64` to get the native m1 mac image.
-
-```yml
-crawler:
-  container_name: crawler
-  image: "a11ywatch/crawler:${CRAWLER_IMAGE:-latest}"
-  ports:
-    - 50055
-```
-
-### Node / Bun
-
-We also release the package to npm [@a11ywatch/crawler](https://www.npmjs.com/package/@a11ywatch/crawler).
-
-```sh
-npm i @a11ywatch/crawler
-```
-
-After import at the top of your project to start the gRPC server or run node directly against the module.
-
-```ts
-import "@a11ywatch/crawler";
 ```
 
 ### Dependencies

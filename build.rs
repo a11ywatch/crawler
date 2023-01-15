@@ -33,6 +33,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => false,
     };
 
+    // TODO: use binary 
+    // curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.8/protoc-3.15.8-linux-x86_64.zip
+    // unzip protoc-3.15.8-linux-x86_64.zip -d $HOME/.local
+    // export PATH="$PATH:$HOME/.local/bin"
+    // OR git clone source
+    // git clone https://github.com/protocolbuffers/protobuf
+    // cd protobuf
+    // git submodule update --init --recursive
+    // cmake --build .
+
     if !protoc_installed {
         if os_type == os_info::Type::Ubuntu
             || os_type == os_info::Type::Pop
