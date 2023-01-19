@@ -12,6 +12,7 @@ pub async fn crawl(
     subdomains: bool,
     tld: bool,
     proxy: String,
+    sitemap: bool
 ) -> Result<(), core::fmt::Error> {
     let mut website: Website = Website::new(&domain);
 
@@ -20,6 +21,7 @@ pub async fn crawl(
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
     website.configuration.proxy = proxy;
+    website.configuration.sitemap = sitemap;
     website.configuration.user_agent = if !agent.is_empty() {
         &agent
     } else {

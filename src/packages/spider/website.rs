@@ -2,6 +2,7 @@ use super::black_list::contains;
 use super::configuration::Configuration;
 use super::page::{build, Page};
 use super::robotparser::RobotFileParser;
+use super::sitemap::get_sitemap_urls;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
@@ -31,6 +32,8 @@ use url::Url;
 pub struct Website {
     /// configuration properties for website.
     pub configuration: Configuration,
+    /// the domain name of the website
+    domain: String,
     /// contains all non-visited URL.
     links: HashSet<String>,
     /// contains all visited URL.
@@ -41,15 +44,19 @@ pub struct Website {
     robot_file_parser: Option<RobotFileParser>,
 }
 
-type Message = HashSet<String>;
+/// hashset string_concat
+pub type Message = HashSet<String>;
 
 impl Website {
     /// Initialize Website object with a start link to crawl.
     pub fn new(domain: &str) -> Self {
+        let domain_base = string_concat!(domain, "/");
+
         Self {
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
-            links: HashSet::from([string_concat!(domain, "/")]),
+            links: HashSet::from([domain_base.clone()]), // todo: remove dup mem usage for domain tracking
+            domain: domain_base,
             pages: Vec::new(),
             robot_file_parser: None,
         }
@@ -80,14 +87,8 @@ impl Website {
             let mut robot_file_parser: RobotFileParser = match &self.robot_file_parser {
                 Some(parser) => parser.to_owned(),
                 _ => {
-                    let mut domain = String::from("");
-                    // the first link upon initial config is always the domain
-                    for links in self.links.iter() {
-                        domain = links.clone();
-                    }
-
                     let mut robot_file_parser =
-                        RobotFileParser::new(&string_concat!(domain, "robots.txt"));
+                        RobotFileParser::new(&string_concat!(self.domain, "robots.txt"));
 
                     robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
 
@@ -118,8 +119,19 @@ impl Website {
                 headers
             };
         }
+
+        let default_policy = reqwest::redirect::Policy::default();
+        let policy = reqwest::redirect::Policy::custom(move |attempt| {
+            if attempt.url().host_str() == Some("127.0.0.1") {
+                attempt.stop()
+            } else {
+                default_policy.redirect(attempt)
+            }
+        });
+
         let mut client = Client::builder()
             .default_headers(HEADERS.clone())
+            .redirect(policy)
             .user_agent(&self.configuration.user_agent)
             .brotli(true);
 
@@ -231,11 +243,8 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        // crawl page walking
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
         let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(100);
-
+        // determine if crawl is still active
         let handle = task::spawn(async move {
             let mut crawl_valid = true;
             while let Some(msg) = rxx.recv().await {
@@ -247,10 +256,62 @@ impl Website {
             crawl_valid
         });
 
-        // crawl while links exists
+        // no phases exist for crawling
+        if !self.configuration.sitemap {
+            self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
+        } else {
+            let (stxx, mut srxx): (Sender<String>, Receiver<String>) = channel(500);
+            let sitemap_client = client.clone();
+            let xml_path = string_concat!(self.domain, "sitemap.xml");
+    
+            let site_handle = task::spawn(async move {
+                get_sitemap_urls(sitemap_client, xml_path, stxx).await;
+            });
+    
+            let link_site_handles = task::spawn(async move {
+                let mut new_links: HashSet<String> = HashSet::new();
+    
+                while let Some(msg) = srxx.recv().await {
+                    if !new_links.contains(&msg) {
+                        new_links.insert(msg);
+                    }
+                }
+    
+                new_links
+            });
+    
+            // PHASE Base
+            self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
+            
+            site_handle.await.unwrap();
+    
+            // PHASE Sitemap
+            let sitemap_links = link_site_handles.await.unwrap();
+    
+            if !sitemap_links.is_empty() {
+                self.links = &sitemap_links - &self.links_visited;
+    
+                self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
+            }
+        }
+
+        drop(txx);
+    }
+
+    /// inner crawl pages until no links exist
+    pub async fn inner_crawl(
+        &mut self,
+        handle: &tokio::task::JoinHandle<bool>,
+        client: &Client,
+        rpcx: &mut WebsiteServiceClient<Channel>,
+        user_id: u32,
+        txx: &Sender<bool>,
+    ) {
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
+
         while !self.links.is_empty() && !handle.is_finished() {
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
-
             let mut stream = tokio_stream::iter(&self.links);
 
             let txx = txx.clone();
@@ -310,8 +371,6 @@ impl Website {
             self.links = &new_links - &self.links_visited;
             task::yield_now().await;
         }
-
-        drop(txx);
     }
 
     /// return `true` if URL:

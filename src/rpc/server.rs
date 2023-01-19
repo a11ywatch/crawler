@@ -25,13 +25,14 @@ impl Crawler for MyCrawler {
         let tld = req.tld == true;
         let id = req.id;
         let proxy = req.proxy;
+        let sitemap = req.sitemap;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
         };
 
         tokio::spawn(async move {
-            scanPage(url, id, respect_robots_txt, agent, subdomains, tld, proxy)
+            scanPage(url, id, respect_robots_txt, agent, subdomains, tld, proxy, sitemap)
                 .await
                 .unwrap_or_default();
         });
@@ -49,13 +50,14 @@ impl Crawler for MyCrawler {
         let tld = req.tld == true;
         let id = req.id;
         let proxy = req.proxy;
+        let sitemap = req.sitemap;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
         };
 
         tokio::spawn(async move {
-            crawlPage(url, id, respect_robots_txt, agent, subdomains, tld, proxy)
+            crawlPage(url, id, respect_robots_txt, agent, subdomains, tld, proxy, sitemap)
                 .await
                 .unwrap_or_default();
         });

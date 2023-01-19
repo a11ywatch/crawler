@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => false,
     };
 
-    // TODO: use binary 
+    // TODO: use binary
     // curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.8/protoc-3.15.8-linux-x86_64.zip
     // unzip protoc-3.15.8-linux-x86_64.zip -d $HOME/.local
     // export PATH="$PATH:$HOME/.local/bin"

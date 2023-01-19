@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+extern crate sitemap;
 extern crate tokio;
 extern crate tonic;
 extern crate ua_generator;

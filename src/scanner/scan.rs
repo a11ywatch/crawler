@@ -15,6 +15,7 @@ pub async fn scan(
     subdomains: bool,
     tld: bool,
     proxy: String,
+    sitemap: bool
 ) -> Result<(), core::fmt::Error> {
     let mut client = create_client().await.unwrap();
     let mut website: Website = Website::new(&domain);
@@ -24,6 +25,7 @@ pub async fn scan(
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
     website.configuration.proxy = proxy;
+    website.configuration.sitemap = sitemap;
     website.configuration.user_agent = if !agent.is_empty() {
         &agent
     } else {

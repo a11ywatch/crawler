@@ -24,6 +24,8 @@ pub struct Configuration {
     pub delay: u64,
     /// proxy to use for request [todo: make breaking API change for handling].
     pub proxy: String,
+    /// extend crawl with sitemap.xml
+    pub sitemap: bool,
 }
 
 impl Configuration {
