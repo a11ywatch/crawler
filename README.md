@@ -94,6 +94,7 @@ website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".
 website.configuration.respect_robots_txt = true;
 website.configuration.subdomains = true;
 website.configuration.tld = false;
+website.configuration.sitemap = false;
 website.configuration.proxy = "http://username:password@localhost:1234";
 website.configuration.delay = 0; // Defaults to 250 ms
 website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version

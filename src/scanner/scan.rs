@@ -15,7 +15,7 @@ pub async fn scan(
     subdomains: bool,
     tld: bool,
     proxy: String,
-    sitemap: bool
+    sitemap: bool,
 ) -> Result<(), core::fmt::Error> {
     let mut client = create_client().await.unwrap();
     let mut website: Website = Website::new(&domain);

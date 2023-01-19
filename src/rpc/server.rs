@@ -32,9 +32,18 @@ impl Crawler for MyCrawler {
         };
 
         tokio::spawn(async move {
-            scanPage(url, id, respect_robots_txt, agent, subdomains, tld, proxy, sitemap)
-                .await
-                .unwrap_or_default();
+            scanPage(
+                url,
+                id,
+                respect_robots_txt,
+                agent,
+                subdomains,
+                tld,
+                proxy,
+                sitemap,
+            )
+            .await
+            .unwrap_or_default();
         });
 
         Ok(Response::new(reply))
@@ -57,9 +66,18 @@ impl Crawler for MyCrawler {
         };
 
         tokio::spawn(async move {
-            crawlPage(url, id, respect_robots_txt, agent, subdomains, tld, proxy, sitemap)
-                .await
-                .unwrap_or_default();
+            crawlPage(
+                url,
+                id,
+                respect_robots_txt,
+                agent,
+                subdomains,
+                tld,
+                proxy,
+                sitemap,
+            )
+            .await
+            .unwrap_or_default();
         });
 
         Ok(Response::new(reply))

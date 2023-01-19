@@ -12,7 +12,7 @@ pub async fn crawl(
     subdomains: bool,
     tld: bool,
     proxy: String,
-    sitemap: bool
+    sitemap: bool,
 ) -> Result<(), core::fmt::Error> {
     let mut website: Website = Website::new(&domain);
 

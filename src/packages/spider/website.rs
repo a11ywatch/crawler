@@ -263,34 +263,34 @@ impl Website {
             let (stxx, mut srxx): (Sender<String>, Receiver<String>) = channel(500);
             let sitemap_client = client.clone();
             let xml_path = string_concat!(self.domain, "sitemap.xml");
-    
+
             let site_handle = task::spawn(async move {
                 get_sitemap_urls(sitemap_client, xml_path, stxx).await;
             });
-    
+
             let link_site_handles = task::spawn(async move {
                 let mut new_links: HashSet<String> = HashSet::new();
-    
+
                 while let Some(msg) = srxx.recv().await {
                     if !new_links.contains(&msg) {
                         new_links.insert(msg);
                     }
                 }
-    
+
                 new_links
             });
-    
+
             // PHASE Base
             self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
-            
+
             site_handle.await.unwrap();
-    
+
             // PHASE Sitemap
             let sitemap_links = link_site_handles.await.unwrap();
-    
+
             if !sitemap_links.is_empty() {
                 self.links = &sitemap_links - &self.links_visited;
-    
+
                 self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
             }
         }

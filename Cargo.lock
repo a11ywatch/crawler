@@ -2389,7 +2389,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.6.56"
+version = "0.6.57"
 dependencies = [
  "async-recursion",
  "cc",
