@@ -2,13 +2,16 @@ use super::black_list::contains;
 use super::configuration::Configuration;
 use super::page::{build, Page};
 use super::robotparser::RobotFileParser;
-use super::sitemap::get_sitemap_urls;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
+use sitemap::{
+    reader::{SiteMapEntity, SiteMapReader},
+    structs::Location,
+};
 use std::time::Duration;
 use tokio;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -42,6 +45,8 @@ pub struct Website {
     pages: Vec<Page>,
     /// Robot.txt parser holder.
     robot_file_parser: Option<RobotFileParser>,
+    /// current sitemap url
+    sitemap_url: String,
 }
 
 /// hashset string_concat
@@ -59,6 +64,7 @@ impl Website {
             domain: domain_base,
             pages: Vec::new(),
             robot_file_parser: None,
+            sitemap_url: String::from(""),
         }
     }
 
@@ -260,46 +266,108 @@ impl Website {
         if !self.configuration.sitemap {
             self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
         } else {
-            let (stxx, mut srxx): (Sender<String>, Receiver<String>) = channel(500);
-            let sitemap_client = client.clone();
-            let xml_path = string_concat!(self.domain, "sitemap.xml");
-
-            let site_handle = task::spawn(async move {
-                get_sitemap_urls(sitemap_client, xml_path, stxx).await;
-            });
-
-            let link_site_handles = task::spawn(async move {
-                let mut new_links: HashSet<String> = HashSet::new();
-
-                while let Some(msg) = srxx.recv().await {
-                    if !new_links.contains(&msg) {
-                        new_links.insert(msg);
-                    }
-                }
-
-                new_links
-            });
-
-            // PHASE Base
+            self.sitemap_crawl(&handle, client, rpcx, &txx, user_id)
+                .await;
             self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
-
-            site_handle.await.unwrap();
-
-            // PHASE Sitemap
-            let sitemap_links = link_site_handles.await.unwrap();
-
-            if !sitemap_links.is_empty() {
-                self.links = &sitemap_links - &self.links_visited;
-
-                self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
-            }
         }
 
         drop(txx);
     }
 
+    /// get the entire list of urls in a sitemap
+    pub async fn sitemap_crawl(
+        &mut self,
+        handle: &tokio::task::JoinHandle<bool>,
+        client: &Client,
+        rpcx: &mut WebsiteServiceClient<Channel>,
+        txx: &Sender<bool>,
+        user_id: u32,
+    ) {
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
+
+        self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
+
+        while !handle.is_finished() && !self.sitemap_url.is_empty() {
+            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
+            let txx = txx.clone();
+            let mut sitemap_added = false;
+
+            match client.get(&self.sitemap_url).send().await {
+                Ok(response) => {
+                    match response.text().await {
+                        Ok(text) => {
+                            for entity in SiteMapReader::new(text.as_bytes()) {
+                                if handle.is_finished() {
+                                    break;
+                                }
+                                match entity {
+                                    SiteMapEntity::Url(url_entry) => match url_entry.loc {
+                                        Location::None => {}
+                                        Location::Url(url) => {
+                                            let link = url.as_str().into();
+
+                                            if !self.is_allowed(&link) {
+                                                continue;
+                                            }
+
+                                            log("fetch", &link);
+                                            self.rpc_callback(
+                                                &rpcx, &client, &txx, &tx, &link, subdomains, tld,
+                                                user_id,
+                                            )
+                                            .await;
+                                            self.links_visited.insert(link);
+                                        }
+                                        Location::ParseErr(error) => {
+                                            log("parse error entry url: ", error.to_string())
+                                        }
+                                    },
+                                    SiteMapEntity::SiteMap(sitemap_entry) => {
+                                        match sitemap_entry.loc {
+                                            Location::None => {}
+                                            Location::Url(url) => {
+                                                self.sitemap_url = url.as_str().into();
+                                                sitemap_added = true;
+                                            }
+                                            Location::ParseErr(err) => {
+                                                log("parse error sitemap url: ", err.to_string())
+                                            }
+                                        }
+                                    }
+                                    SiteMapEntity::Err(err) => {
+                                        log("incorrect sitemap error: ", err.msg())
+                                    }
+                                }
+                            }
+                        }
+                        Err(err) => log("http parse error: ", err.to_string()),
+                    };
+                }
+                Err(err) => log("http network error: ", err.to_string()),
+            };
+
+            drop(tx);
+            drop(txx);
+
+            let mut new_links: HashSet<String> = HashSet::new();
+
+            while let Some(msg) = rx.recv().await {
+                new_links.extend(msg);
+                task::yield_now().await;
+            }
+
+            self.links = &new_links - &self.links_visited;
+            task::yield_now().await;
+
+            if !sitemap_added {
+                self.sitemap_url.clear();
+            }
+        }
+    }
+
     /// inner crawl pages until no links exist
-    pub async fn inner_crawl(
+    async fn inner_crawl(
         &mut self,
         handle: &tokio::task::JoinHandle<bool>,
         client: &Client,
@@ -313,7 +381,6 @@ impl Website {
         while !self.links.is_empty() && !handle.is_finished() {
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
             let mut stream = tokio_stream::iter(&self.links);
-
             let txx = txx.clone();
 
             while let Some(link) = stream.next().await {
@@ -323,39 +390,10 @@ impl Website {
                 if !self.is_allowed(&link) {
                     continue;
                 }
-                self.links_visited.insert(link.into());
                 log("fetch", &link);
-
-                // cb spawn
-                let mut rpcx = rpcx.clone();
-                let txx = txx.clone();
-                task::yield_now().await;
-
-                // link spawn
-                let tx = tx.clone();
-                let client = client.clone();
-                let link = link.clone();
-
-                task::spawn(async move {
-                    {
-                        let page = Page::new(&link, &client).await;
-                        let links = page.links(subdomains, tld);
-
-                        task::spawn(async move {
-                            {
-                                let x = monitor(&mut rpcx, &link, user_id, page.html).await;
-
-                                if let Err(_) = txx.send(x).await {
-                                    log("receiver dropped", "");
-                                }
-                            }
-                        });
-
-                        if let Err(_) = tx.send(links).await {
-                            log("receiver dropped", "");
-                        }
-                    }
-                });
+                self.rpc_callback(&rpcx, &client, &txx, &tx, &link, subdomains, tld, user_id)
+                    .await;
+                self.links_visited.insert(link.to_owned());
             }
 
             drop(tx);
@@ -371,6 +409,48 @@ impl Website {
             self.links = &new_links - &self.links_visited;
             task::yield_now().await;
         }
+    }
+
+    /// perform the rpc callback on new link
+    async fn rpc_callback(
+        &self,
+        rpcx: &WebsiteServiceClient<Channel>,
+        client: &Client,
+        txx: &Sender<bool>,
+        tx: &Sender<Message>,
+        link: &String,
+        subdomains: bool,
+        tld: bool,
+        user_id: u32,
+    ) {
+        let mut rpcx = rpcx.clone();
+        let txx = txx.clone();
+        let tx = tx.clone();
+        task::yield_now().await;
+        // link spawn
+        let client = client.clone();
+        let link = link.to_owned();
+
+        task::spawn(async move {
+            {
+                let page = Page::new(&link, &client).await;
+                let links = page.links(subdomains, tld);
+
+                task::spawn(async move {
+                    {
+                        let x = monitor(&mut rpcx, &link, user_id, page.html).await;
+
+                        if let Err(_) = txx.send(x).await {
+                            log("receiver dropped", "");
+                        }
+                    }
+                });
+
+                if let Err(_) = tx.send(links).await {
+                    log("receiver dropped", "");
+                }
+            }
+        });
     }
 
     /// return `true` if URL:

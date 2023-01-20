@@ -5,6 +5,7 @@ use std::process::Command;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
+    // todo: checkin compilled protos
     Command::new("npm")
         .args(["i", "--prefix", &out_dir, "@a11ywatch/protos"])
         .output()

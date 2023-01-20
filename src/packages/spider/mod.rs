@@ -30,8 +30,6 @@ pub mod configuration;
 pub mod page;
 /// Robot parser.
 pub mod robotparser;
-/// Sitemap link reader.
-pub mod sitemap;
 /// Application utils.
 pub mod utils;
 /// A website to crawl.
