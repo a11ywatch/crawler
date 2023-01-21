@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package health;
+
+// check if a service is good and healthy
+service HealthCheck {
+    rpc check(HealthCheckRequest) returns (HealthCheckReply); // determine if server is alive.
+}
+
+// empty request
+message HealthCheckRequest {}
+
+// the health status
+message HealthCheckReply {
+    bool healthy = 1; // bool to indicate health or online.
+}

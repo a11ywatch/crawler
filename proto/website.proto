@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package website;
+
+import "google/protobuf/struct.proto";
+
+// Central API that manages your website between starting single and multi page scans.
+service WebsiteService {
+   rpc ScanStart (ScanInitParams) returns (Empty) {} // track when scan starts.
+   rpc ScanEnd (ScanInitParams) returns (Empty) {} // tracks when scan completes.
+   rpc Scan (ScanParams) returns (Empty) {} // non stream scanning allowing for full track up time for keep alive cost.
+   rpc ScanStream (ScanParams) returns (stream ScanStreamResponse) {} // stream the scan request and return if scan should continue.
+   rpc PageSet (LightHouse) returns (Empty) {} // update a page response directly 1:1 useful for lighthouse and other integrations.
+}
+
+// params to send when scanning pages.
+message ScanParams {
+   repeated string pages = 1; // list of pages returned.
+   string domain = 2; // the url base of the crawl.
+   uint32 user_id = 3; // user id performing scan.
+   bool full = 4; // full crawl performed with all links.
+   string html = 5; // raw HTML to verify.
+}
+
+// params to declare scan stream initiation [Should use bidirectional streams instead].
+message ScanInitParams {
+   string domain = 1; // the url base of the crawl.
+   uint32 user_id = 2; // user id performing scan.
+}
+
+// send nothing mainly for triggering events.
+message Empty {}
+
+// send streamed response
+message ScanStreamResponse {
+   string message = 1; // message of the scan success or if should terminate.
+}
+
+// Lighthouse report insight from Pagemind.
+message LightHouse {
+   uint32 user_id = 1; // the user that made the request.
+   string domain = 2; // the domain for the request [example.com].
+   string url = 3; // the url of the request with http or https
+   google.protobuf.Struct insight = 4; // the json details from lighthouse
+}
