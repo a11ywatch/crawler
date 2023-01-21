@@ -7,7 +7,7 @@ ENV GRPC_HOST=0.0.0.0:50055
 ENV GRPC_HOST_API=api:50051
 
 RUN apk add --update \
-    build-base cmake make libc6-compat make npm protoc protobuf-dev pkgconfig openssl openssl-dev libffi-dev zlib-dev musl-dev && \
+    build-base cmake make libc6-compat make protoc protobuf-dev pkgconfig openssl openssl-dev libffi-dev zlib-dev musl-dev && \
     rm -rf /var/cache/apk/*
 
 RUN update-ca-certificates
