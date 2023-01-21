@@ -1,28 +1,10 @@
-use std::env;
 use std::process::Command;
 
 #[allow(missing_docs)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let out_dir = env::var("OUT_DIR").unwrap();
-
-    // todo: checkin compilled protos
-    Command::new("npm")
-        .args(["i", "--prefix", &out_dir, "@a11ywatch/protos"])
-        .output()
-        .expect("failed to execute process");
-
-    tonic_build::compile_protos(format!(
-        "{}/node_modules/@a11ywatch/protos/crawler.proto",
-        out_dir
-    ))?;
-    tonic_build::compile_protos(format!(
-        "{}/node_modules/@a11ywatch/protos/website.proto",
-        out_dir
-    ))?;
-    tonic_build::compile_protos(format!(
-        "{}/node_modules/@a11ywatch/protos/health.proto",
-        out_dir
-    ))?;
+    tonic_build::compile_protos("proto/crawler.proto")?;
+    tonic_build::compile_protos("proto/website.proto")?;
+    tonic_build::compile_protos("proto/health.proto")?;
 
     // os info validate protbuf install. If not installed - install and remove after.
     let info = os_info::get();
