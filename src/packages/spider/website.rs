@@ -12,9 +12,11 @@ use sitemap::{
     reader::{SiteMapEntity, SiteMapReader},
     structs::Location,
 };
+use std::sync::Arc;
 use std::time::Duration;
 use tokio;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task;
 use tokio::time::sleep;
 use tokio_stream::StreamExt;
@@ -55,7 +57,7 @@ pub type Message = HashSet<String>;
 impl Website {
     /// Initialize Website object with a start link to crawl.
     pub fn new(domain: &str) -> Self {
-        let domain_base = string_concat!(domain, "/");
+        let domain_base = string_concat!(&domain, "/");
 
         Self {
             configuration: Configuration::new(),
@@ -266,7 +268,7 @@ impl Website {
         if !self.configuration.sitemap {
             self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
         } else {
-            self.sitemap_crawl(&handle, client, rpcx, &txx, user_id)
+            self.sitemap_crawl(&handle, client, rpcx, user_id, &txx)
                 .await;
             self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
         }
@@ -280,13 +282,13 @@ impl Website {
         handle: &tokio::task::JoinHandle<bool>,
         client: &Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
-        txx: &Sender<bool>,
         user_id: u32,
+        txx: &Sender<bool>,
     ) {
+        self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
-
-        self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
+        let semaphore = Arc::new(Semaphore::new(10));
 
         while !handle.is_finished() && !self.sitemap_url.is_empty() {
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
@@ -301,6 +303,7 @@ impl Website {
                                 if handle.is_finished() {
                                     break;
                                 }
+
                                 match entity {
                                     SiteMapEntity::Url(url_entry) => match url_entry.loc {
                                         Location::None => {}
@@ -312,11 +315,16 @@ impl Website {
                                             }
 
                                             log("fetch", &link);
-                                            self.rpc_callback(
+
+                                            let permit =
+                                                semaphore.clone().acquire_owned().await.unwrap();
+
+                                            self.rpc_callback_semaphor(
                                                 &rpcx, &client, &txx, &tx, &link, subdomains, tld,
-                                                user_id,
+                                                user_id, permit,
                                             )
                                             .await;
+
                                             self.links_visited.insert(link);
                                         }
                                         Location::ParseErr(error) => {
@@ -358,11 +366,12 @@ impl Website {
             }
 
             self.links = &new_links - &self.links_visited;
-            task::yield_now().await;
 
             if !sitemap_added {
                 self.sitemap_url.clear();
             }
+
+            task::yield_now().await;
         }
     }
 
@@ -437,12 +446,10 @@ impl Website {
                 let links = page.links(subdomains, tld);
 
                 task::spawn(async move {
-                    {
-                        let x = monitor(&mut rpcx, &link, user_id, page.html).await;
+                    let x = monitor(&mut rpcx, &link, user_id, page.html).await;
 
-                        if let Err(_) = txx.send(x).await {
-                            log("receiver dropped", "");
-                        }
+                    if let Err(_) = txx.send(x).await {
+                        log("receiver dropped", "");
                     }
                 });
 
@@ -453,6 +460,45 @@ impl Website {
         });
     }
 
+    /// perform the rpc callback on new link with semaphore
+    async fn rpc_callback_semaphor(
+        &self,
+        rpcx: &WebsiteServiceClient<Channel>,
+        client: &Client,
+        txx: &Sender<bool>,
+        tx: &Sender<Message>,
+        link: &String,
+        subdomains: bool,
+        tld: bool,
+        user_id: u32,
+        permit: OwnedSemaphorePermit,
+    ) {
+        let mut rpcx = rpcx.clone();
+        let txx = txx.clone();
+        let tx = tx.clone();
+        task::yield_now().await;
+        // link spawn
+        let client = client.clone();
+        let link = link.to_owned();
+
+        task::spawn(async move {
+            let page = Page::new(&link, &client).await;
+            let links = page.links(subdomains, tld);
+            drop(permit);
+
+            task::spawn(async move {
+                let x = monitor(&mut rpcx, &link, user_id, page.html).await;
+
+                if let Err(_) = txx.send(x).await {
+                    log("receiver dropped", "");
+                }
+            });
+
+            if let Err(_) = tx.send(links).await {
+                log("receiver dropped", "");
+            };
+        });
+    }
     /// return `true` if URL:
     ///
     /// - is not already crawled

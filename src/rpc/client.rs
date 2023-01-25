@@ -69,12 +69,11 @@ pub async fn monitor(
     html: String,
 ) -> bool {
     let request = tonic::Request::new(ScanParams {
-        pages: vec![link.clone()],
+        pages: vec![link.into()],
         user_id,
         html,
         ..Default::default()
     });
-    // let mut stream = client.scan_stream(request).await.unwrap().into_inner();
     let stream: Option<Streaming<ScanStreamResponse>> = match client.scan_stream(request).await {
         // The arms of a match must cover all the possible values
         Ok(val) => Some(val.into_inner()),
