@@ -252,6 +252,9 @@ impl Website {
         user_id: u32,
     ) {
         let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(100);
+        let subdomains = self.configuration.subdomains;
+        let tld = self.configuration.tld;
+
         // determine if crawl is still active
         let handle = task::spawn(async move {
             let mut crawl_valid = true;
@@ -264,16 +267,17 @@ impl Website {
             crawl_valid
         });
 
-        // no phases exist for crawling
-        if !self.configuration.sitemap {
-            self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
-        } else {
-            self.sitemap_crawl(&handle, client, rpcx, user_id, &txx)
-                .await;
-            self.inner_crawl(&handle, client, rpcx, user_id, &txx).await;
-        }
+        if self.configuration.sitemap {
+            self.sitemap_crawl(
+                &handle, client, rpcx, user_id, &txx, subdomains, tld,
+            )
+            .await;
+        };
 
-        drop(txx);
+        self.inner_crawl(
+            &handle, client, rpcx, user_id, &txx, subdomains, tld,
+        )
+        .await;
     }
 
     /// get the entire list of urls in a sitemap
@@ -284,16 +288,14 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
         txx: &Sender<bool>,
+        subdomains: bool,
+        tld: bool,
     ) {
         self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
-        let semaphore = Arc::new(Semaphore::new(100));
 
         while !handle.is_finished() && !self.sitemap_url.is_empty() {
-            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
-            let txx = txx.clone();
             let mut sitemap_added = false;
+            let txx = txx.clone();
 
             match client.get(&self.sitemap_url).send().await {
                 Ok(response) => {
@@ -302,8 +304,7 @@ impl Website {
                             for entity in SiteMapReader::new(text.as_bytes()) {
                                 if handle.is_finished() {
                                     break;
-                                }
-
+                                };
                                 match entity {
                                     SiteMapEntity::Url(url_entry) => match url_entry.loc {
                                         Location::None => {}
@@ -312,20 +313,9 @@ impl Website {
 
                                             if !self.is_allowed(&link) {
                                                 continue;
-                                            }
+                                            };
 
-                                            log("fetch", &link);
-
-                                            let permit =
-                                                semaphore.clone().acquire_owned().await.unwrap();
-
-                                            self.rpc_callback_semaphor(
-                                                &rpcx, &client, &txx, &tx, &link, subdomains, tld,
-                                                user_id, permit,
-                                            )
-                                            .await;
-
-                                            self.links_visited.insert(link);
+                                            self.links.insert(link);
                                         }
                                         Location::ParseErr(error) => {
                                             log("parse error entry url: ", error.to_string())
@@ -346,7 +336,14 @@ impl Website {
                                     SiteMapEntity::Err(err) => {
                                         log("incorrect sitemap error: ", err.msg())
                                     }
-                                }
+                                };
+
+                                // crawl between each link
+                                self.inner_crawl(
+                                    &handle, client, rpcx, user_id, &txx, subdomains,
+                                    tld,
+                                )
+                                .await;
                             }
                         }
                         Err(err) => log("http parse error: ", err.to_string()),
@@ -355,23 +352,9 @@ impl Website {
                 Err(err) => log("http network error: ", err.to_string()),
             };
 
-            drop(tx);
-            drop(txx);
-
-            let mut new_links: HashSet<String> = HashSet::new();
-
-            while let Some(msg) = rx.recv().await {
-                new_links.extend(msg);
-                task::yield_now().await;
-            }
-
-            self.links = &new_links - &self.links_visited;
-
             if !sitemap_added {
                 self.sitemap_url.clear();
-            }
-
-            task::yield_now().await;
+            };
         }
     }
 
@@ -383,11 +366,11 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
         txx: &Sender<bool>,
+        subdomains: bool,
+        tld: bool,
     ) {
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
-
         while !self.links.is_empty() && !handle.is_finished() {
+            let semaphore = Arc::new(Semaphore::new(100));
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
             let mut stream = tokio_stream::iter(&self.links);
             let txx = txx.clone();
@@ -400,9 +383,12 @@ impl Website {
                     continue;
                 }
                 log("fetch", &link);
-                self.rpc_callback(&rpcx, &client, &txx, &tx, &link, subdomains, tld, user_id)
-                    .await;
                 self.links_visited.insert(link.to_owned());
+                let permit = semaphore.clone().acquire_owned().await.unwrap();
+                self.rpc_callback(
+                    &rpcx, &client, &txx, &tx, &link, user_id, subdomains, tld, permit,
+                )
+                .await;
             }
 
             drop(tx);
@@ -428,9 +414,10 @@ impl Website {
         txx: &Sender<bool>,
         tx: &Sender<Message>,
         link: &String,
+        user_id: u32,
         subdomains: bool,
         tld: bool,
-        user_id: u32,
+        permit: OwnedSemaphorePermit,
     ) {
         let mut rpcx = rpcx.clone();
         let txx = txx.clone();
@@ -439,11 +426,13 @@ impl Website {
         // link spawn
         let client = client.clone();
         let link = link.to_owned();
+        task::yield_now().await;
 
         task::spawn(async move {
             {
                 let page = Page::new(&link, &client).await;
                 let links = page.links(subdomains, tld);
+                drop(permit);
 
                 task::spawn(async move {
                     let x = monitor(&mut rpcx, &link, user_id, page.html).await;
@@ -460,45 +449,6 @@ impl Website {
         });
     }
 
-    /// perform the rpc callback on new link with semaphore
-    async fn rpc_callback_semaphor(
-        &self,
-        rpcx: &WebsiteServiceClient<Channel>,
-        client: &Client,
-        txx: &Sender<bool>,
-        tx: &Sender<Message>,
-        link: &String,
-        subdomains: bool,
-        tld: bool,
-        user_id: u32,
-        permit: OwnedSemaphorePermit,
-    ) {
-        let mut rpcx = rpcx.clone();
-        let txx = txx.clone();
-        let tx = tx.clone();
-        task::yield_now().await;
-        // link spawn
-        let client = client.clone();
-        let link = link.to_owned();
-
-        task::spawn(async move {
-            let page = Page::new(&link, &client).await;
-            let links = page.links(subdomains, tld);
-            drop(permit);
-
-            task::spawn(async move {
-                let x = monitor(&mut rpcx, &link, user_id, page.html).await;
-
-                if let Err(_) = txx.send(x).await {
-                    log("receiver dropped", "");
-                }
-            });
-
-            if let Err(_) = tx.send(links).await {
-                log("receiver dropped", "");
-            };
-        });
-    }
     /// return `true` if URL:
     ///
     /// - is not already crawled

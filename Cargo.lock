@@ -2384,7 +2384,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.6.73"
+version = "0.7.26"
 dependencies = [
  "cc",
  "env_logger",
