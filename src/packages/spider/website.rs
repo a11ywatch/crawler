@@ -288,7 +288,7 @@ impl Website {
         self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
-        let semaphore = Arc::new(Semaphore::new(10));
+        let semaphore = Arc::new(Semaphore::new(100));
 
         while !handle.is_finished() && !self.sitemap_url.is_empty() {
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
