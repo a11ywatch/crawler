@@ -46,7 +46,7 @@ fn build_absolute_selectors(url: &str) -> String {
 
 /// get the host name for url without tld
 fn domain_name(domain: &Url) -> String {
-    let b = domain.host_str().unwrap_or("").to_string();
+    let b = domain.host_str().unwrap_or_default();
     let mut b = b.split(".").collect::<Vec<&str>>();
     if b.len() >= 2 {
         b.pop(); // remove the tld
@@ -203,7 +203,7 @@ impl Page {
         } else {
             anchors
                 .map(|a| {
-                    self.abs_path(a.value().attr("href").unwrap_or(""))
+                    self.abs_path(a.value().attr("href").unwrap_or_default())
                         .to_string()
                 })
                 .collect()
@@ -212,14 +212,15 @@ impl Page {
 
     /// Convert a URL to its absolute path without any fragments or params.
     fn abs_path(&self, href: &str) -> Url {
-        let mut joined = self
-            .base
-            .join(href)
-            .unwrap_or(Url::parse(&self.url.to_string()).expect("Invalid page URL"));
-
-        joined.set_fragment(None);
-
-        joined
+        match self.base.join(href) {
+            Ok(mut joined) => {
+                joined.set_fragment(None);
+                joined
+            }
+            Err(_) => {
+                Url::parse(&self.url.to_string()).expect("Invalid page URL")
+            }
+        }
     }
 }
 

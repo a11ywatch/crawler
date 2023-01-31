@@ -109,7 +109,7 @@ impl Website {
                 robot_file_parser.read(client).await;
                 self.configuration.delay = robot_file_parser
                     .get_crawl_delay(&robot_file_parser.user_agent) // returns the crawl delay in seconds
-                    .unwrap_or(self.get_delay())
+                    .unwrap_or_else(|| self.get_delay())
                     .as_millis() as u64;
             }
 
@@ -268,16 +268,12 @@ impl Website {
         });
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(
-                &handle, client, rpcx, user_id, &txx, subdomains, tld,
-            )
-            .await;
+            self.sitemap_crawl(&handle, client, rpcx, user_id, &txx, subdomains, tld)
+                .await;
         };
 
-        self.inner_crawl(
-            &handle, client, rpcx, user_id, &txx, subdomains, tld,
-        )
-        .await;
+        self.inner_crawl(&handle, client, rpcx, user_id, &txx, subdomains, tld)
+            .await;
     }
 
     /// get the entire list of urls in a sitemap
@@ -340,8 +336,7 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, user_id, &txx, subdomains,
-                                    tld,
+                                    &handle, client, rpcx, user_id, &txx, subdomains, tld,
                                 )
                                 .await;
                             }

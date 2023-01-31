@@ -18,7 +18,7 @@ pub async fn create_client() -> Result<WebsiteServiceClient<Channel>, tonic::tra
     lazy_static! {
         static ref CLIENT: String = format!(
             "http://{}",
-            var("GRPC_HOST_API").unwrap_or("[::1]:50051".to_string())
+            var("GRPC_HOST_API").unwrap_or_else(|_| "[::1]:50051".to_string())
         );
     };
 
