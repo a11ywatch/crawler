@@ -1,0 +1,24 @@
+name: Build and deploy to DockerHub
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-buildx-action@v1
+      - name: login to docker hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: build the image
+        run: |
+          docker buildx build \
+            -t a11ywatch/crawler:latest \
+            --platform linux/amd64,linux/arm64 \
+            --push .
