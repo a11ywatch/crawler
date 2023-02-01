@@ -15,7 +15,7 @@ use sitemap::{
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedSender, UnboundedReceiver, unbounded_channel};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task;
 use tokio::time::sleep;
@@ -251,7 +251,8 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        let (txx, mut rxx): (Sender<bool>, Receiver<bool>) = channel(100);
+        let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
+        let semaphore = Arc::new(Semaphore::new(200));
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
 
@@ -268,11 +269,11 @@ impl Website {
         });
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(&handle, client, rpcx, user_id, &txx, subdomains, tld)
+            self.sitemap_crawl(&handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld)
                 .await;
         };
 
-        self.inner_crawl(&handle, client, rpcx, user_id, &txx, subdomains, tld)
+        self.inner_crawl(&handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld)
             .await;
     }
 
@@ -282,8 +283,9 @@ impl Website {
         handle: &tokio::task::JoinHandle<bool>,
         client: &Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
+        semaphore: &Arc<Semaphore>,
         user_id: u32,
-        txx: &Sender<bool>,
+        txx: &UnboundedSender<bool>,
         subdomains: bool,
         tld: bool,
     ) {
@@ -336,7 +338,7 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, user_id, &txx, subdomains, tld,
+                                    &handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld,
                                 )
                                 .await;
                             }
@@ -359,14 +361,14 @@ impl Website {
         handle: &tokio::task::JoinHandle<bool>,
         client: &Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
+        semaphore: &Arc<Semaphore>,
         user_id: u32,
-        txx: &Sender<bool>,
+        txx: &UnboundedSender<bool>,
         subdomains: bool,
         tld: bool,
     ) {
         while !self.links.is_empty() && !handle.is_finished() {
-            let semaphore = Arc::new(Semaphore::new(100));
-            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
+            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = unbounded_channel();
             let mut stream = tokio_stream::iter(&self.links);
             let txx = txx.clone();
 
@@ -377,11 +379,11 @@ impl Website {
                 if !self.is_allowed(&link) {
                     continue;
                 }
+                let permit = semaphore.clone().acquire_owned().await.unwrap();
                 log("fetch", &link);
                 self.links_visited.insert(link.to_owned());
-                let permit = semaphore.clone().acquire_owned().await.unwrap();
                 self.rpc_callback(
-                    &rpcx, &client, &txx, &tx, &link, user_id, subdomains, tld, permit,
+                    &rpcx, &client, &txx, &tx, link, user_id, subdomains, tld, permit,
                 )
                 .await;
             }
@@ -406,8 +408,8 @@ impl Website {
         &self,
         rpcx: &WebsiteServiceClient<Channel>,
         client: &Client,
-        txx: &Sender<bool>,
-        tx: &Sender<Message>,
+        txx: &UnboundedSender<bool>,
+        tx: &UnboundedSender<Message>,
         link: &String,
         user_id: u32,
         subdomains: bool,
@@ -418,7 +420,6 @@ impl Website {
         let txx = txx.clone();
         let tx = tx.clone();
         task::yield_now().await;
-        // link spawn
         let client = client.clone();
         let link = link.to_owned();
         task::yield_now().await;
@@ -430,14 +431,14 @@ impl Website {
                 drop(permit);
 
                 task::spawn(async move {
-                    let x = monitor(&mut rpcx, &link, user_id, page.html).await;
+                    let x = monitor(&mut rpcx, link, user_id, page.html).await;
 
-                    if let Err(_) = txx.send(x).await {
+                    if let Err(_) = txx.send(x) {
                         log("receiver dropped", "");
                     }
                 });
 
-                if let Err(_) = tx.send(links).await {
+                if let Err(_) = tx.send(links) {
                     log("receiver dropped", "");
                 }
             }

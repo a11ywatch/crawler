@@ -19,6 +19,7 @@ jobs:
       - name: build the image
         run: |
           docker buildx build \
+            --memory="2g" \
             -t a11ywatch/crawler:latest \
             --platform linux/amd64,linux/arm64 \
             --push .

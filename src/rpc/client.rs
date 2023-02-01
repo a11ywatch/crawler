@@ -64,18 +64,17 @@ pub async fn monitor_page_async(page: ScanParams) -> Result<(), tonic::Status> {
 /// run a accessibility scan waiting for results.
 pub async fn monitor(
     client: &mut WebsiteServiceClient<Channel>,
-    link: &String,
+    link: String,
     user_id: u32,
     html: String,
 ) -> bool {
     let request = tonic::Request::new(ScanParams {
-        pages: vec![link.into()],
+        pages: vec![link],
         user_id,
         html,
         ..Default::default()
     });
     let stream: Option<Streaming<ScanStreamResponse>> = match client.scan_stream(request).await {
-        // The arms of a match must cover all the possible values
         Ok(val) => Some(val.into_inner()),
         Err(e) => {
             log("error status-code :", &e.code().to_string());
@@ -89,7 +88,6 @@ pub async fn monitor(
     match stream {
         Some(mut res) => {
             while let Some(r) = res.message().await.unwrap_or_default() {
-                log("[stream]: processed -", &link);
                 if r.message == "shutdown" {
                     perform_shutdown = true;
                 }
