@@ -217,9 +217,7 @@ impl Page {
                 joined.set_fragment(None);
                 joined
             }
-            Err(_) => {
-                Url::parse(&self.url.to_string()).expect("Invalid page URL")
-            }
+            Err(_) => Url::parse(&self.url.to_string()).expect("Invalid page URL"),
         }
     }
 }

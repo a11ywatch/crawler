@@ -15,7 +15,9 @@ use sitemap::{
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
-use tokio::sync::mpsc::{channel, Receiver, Sender, UnboundedSender, UnboundedReceiver, unbounded_channel};
+use tokio::sync::mpsc::{
+    channel, unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender,
+};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task;
 use tokio::time::sleep;
@@ -269,12 +271,16 @@ impl Website {
         });
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(&handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld)
-                .await;
+            self.sitemap_crawl(
+                &handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld,
+            )
+            .await;
         };
 
-        self.inner_crawl(&handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld)
-            .await;
+        self.inner_crawl(
+            &handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld,
+        )
+        .await;
     }
 
     /// get the entire list of urls in a sitemap
@@ -338,7 +344,8 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld,
+                                    &handle, client, rpcx, &semaphore, user_id, &txx, subdomains,
+                                    tld,
                                 )
                                 .await;
                             }
@@ -368,7 +375,8 @@ impl Website {
         tld: bool,
     ) {
         while !self.links.is_empty() && !handle.is_finished() {
-            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = unbounded_channel();
+            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
+                unbounded_channel();
             let mut stream = tokio_stream::iter(&self.links);
             let txx = txx.clone();
 
@@ -379,9 +387,9 @@ impl Website {
                 if !self.is_allowed(&link) {
                     continue;
                 }
+                self.links_visited.insert(link.into());
                 let permit = semaphore.clone().acquire_owned().await.unwrap();
                 log("fetch", &link);
-                self.links_visited.insert(link.to_owned());
                 self.rpc_callback(
                     &rpcx, &client, &txx, &tx, link, user_id, subdomains, tld, permit,
                 )
