@@ -1,6 +1,6 @@
 use super::black_list::contains;
 use super::configuration::Configuration;
-use super::page::{build, Page};
+use super::page::{build, Page, get_page_selectors};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
@@ -8,6 +8,7 @@ use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
+use scraper::Selector;
 use sitemap::{
     reader::{SiteMapEntity, SiteMapReader},
     structs::Location,
@@ -204,6 +205,8 @@ impl Website {
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
 
+        let selector = Arc::new(get_page_selectors(&self.domain, subdomains, tld));
+
         // crawl while links exists
         while !self.links.is_empty() {
             let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
@@ -218,6 +221,7 @@ impl Website {
                 let tx = tx.clone();
                 let client = client.clone();
                 let link = link.clone();
+                let selector = selector.clone();
 
                 task::spawn(async move {
                     {
@@ -225,7 +229,7 @@ impl Website {
                             sleep(Duration::from_millis(delay)).await;
                         }
                         let page = Page::new(&link, &client).await;
-                        let links = page.links(subdomains, tld);
+                        let links = page.links(&*selector, subdomains, tld);
 
                         if let Err(_) = tx.send(links).await {
                             log("receiver dropped", "");
@@ -253,10 +257,12 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
-        let semaphore = Arc::new(Semaphore::new(200));
         let subdomains = self.configuration.subdomains;
         let tld = self.configuration.tld;
+
+        let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
+        let semaphore = Arc::new(Semaphore::new(200));
+        let selector = Arc::new(get_page_selectors(&self.domain, subdomains, tld));
 
         // determine if crawl is still active
         let handle = task::spawn(async move {
@@ -272,13 +278,13 @@ impl Website {
 
         if self.configuration.sitemap {
             self.sitemap_crawl(
-                &handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld,
+                &handle, client, rpcx, &semaphore, &selector, user_id, &txx, subdomains, tld,
             )
             .await;
         };
 
         self.inner_crawl(
-            &handle, client, rpcx, &semaphore, user_id, &txx, subdomains, tld,
+            &handle, client, rpcx, &semaphore, &selector, user_id, &txx, subdomains, tld,
         )
         .await;
     }
@@ -290,6 +296,7 @@ impl Website {
         client: &Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
         semaphore: &Arc<Semaphore>,
+        selector: &Arc<Selector>,
         user_id: u32,
         txx: &UnboundedSender<bool>,
         subdomains: bool,
@@ -344,8 +351,8 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, &semaphore, user_id, &txx, subdomains,
-                                    tld,
+                                    &handle, client, rpcx, &semaphore, &selector, user_id, &txx,
+                                    subdomains, tld,
                                 )
                                 .await;
                             }
@@ -369,6 +376,7 @@ impl Website {
         client: &Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
         semaphore: &Arc<Semaphore>,
+        selector: &Arc<Selector>,
         user_id: u32,
         txx: &UnboundedSender<bool>,
         subdomains: bool,
@@ -391,7 +399,7 @@ impl Website {
                 let permit = semaphore.clone().acquire_owned().await.unwrap();
                 log("fetch", &link);
                 self.rpc_callback(
-                    &rpcx, &client, &txx, &tx, link, user_id, subdomains, tld, permit,
+                    &rpcx, &client, &txx, &tx, &selector, link, user_id, subdomains, tld, permit,
                 )
                 .await;
             }
@@ -418,6 +426,7 @@ impl Website {
         client: &Client,
         txx: &UnboundedSender<bool>,
         tx: &UnboundedSender<Message>,
+        selector: &Arc<Selector>,
         link: &String,
         user_id: u32,
         subdomains: bool,
@@ -430,12 +439,14 @@ impl Website {
         task::yield_now().await;
         let client = client.clone();
         let link = link.to_owned();
+        let selector = selector.clone();
+
         task::yield_now().await;
 
         task::spawn(async move {
             {
                 let page = Page::new(&link, &client).await;
-                let links = page.links(subdomains, tld);
+                let links = page.links(&*selector, subdomains, tld);
                 drop(permit);
 
                 task::spawn(async move {
