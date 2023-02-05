@@ -263,6 +263,7 @@ impl Website {
         let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
         let semaphore = Arc::new(Semaphore::new(200));
         let selector = Arc::new(get_page_selectors(&self.domain, subdomains, tld));
+        let throttle = self.get_delay();
 
         // determine if crawl is still active
         let handle = task::spawn(async move {
@@ -278,13 +279,13 @@ impl Website {
 
         if self.configuration.sitemap {
             self.sitemap_crawl(
-                &handle, client, rpcx, &semaphore, &selector, user_id, &txx, subdomains, tld,
+                &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx, subdomains, tld,
             )
             .await;
         };
 
         self.inner_crawl(
-            &handle, client, rpcx, &semaphore, &selector, user_id, &txx, subdomains, tld,
+            &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx, subdomains, tld,
         )
         .await;
     }
@@ -297,6 +298,7 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         semaphore: &Arc<Semaphore>,
         selector: &Arc<Selector>,
+        throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
         subdomains: bool,
@@ -351,7 +353,7 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, &semaphore, &selector, user_id, &txx,
+                                    &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx,
                                     subdomains, tld,
                                 )
                                 .await;
@@ -377,6 +379,7 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         semaphore: &Arc<Semaphore>,
         selector: &Arc<Selector>,
+        throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
         subdomains: bool,
@@ -385,7 +388,8 @@ impl Website {
         while !self.links.is_empty() && !handle.is_finished() {
             let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
                 unbounded_channel();
-            let mut stream = tokio_stream::iter(&self.links);
+                let stream = tokio_stream::iter(&self.links).throttle(*throttle);
+                tokio::pin!(stream);
             let txx = txx.clone();
 
             while let Some(link) = stream.next().await {
