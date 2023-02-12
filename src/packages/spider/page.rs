@@ -14,7 +14,7 @@ pub struct Page {
 }
 
 /// CSS query selector to ignore all resources that are not valid web pages.
-const MEDIA_IGNORE_SELECTOR: &str = r#":not([href$=".ico"]):not([href$=".png"]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".xlsx"]):not([href$=".rtf"]):not([href$=".svg"]):not([href$=".webp"]):not([href$=".img"]):not([href$=".gif"]):not([href$=".pdf"]):not([href$=".tiff"]):not([href$=".mov"]):not([href$=".wav"]):not([href$=".mp3"]):not([href$=".mp4"]):not([href$=".ogg"]):not([href$=".webm"]):not([href$=".sql"]):not([href$=".zip"]):not([href$=".docx"]):not([href$=".git"]):not([href$=".json"]):not([href$=".xml"]):not([href$=".css"]):not([href$=".md"]):not([href$=".txt"]):not([href$=".js"]):not([href$=".jsx"]):not([href$=".csv"]):not([href$=".dmg"]):not([href$=".msi"]):not([href$=".tar"]):not([href$=".gz"])"#;
+const MEDIA_IGNORE_SELECTOR: &str = r#":not([style*="display: none"]):not([style*="visibility: hidden"]):not([href$=".ico"]):not([href$=".png"]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".xlsx"]):not([href$=".rtf"]):not([href$=".svg"]):not([href$=".webp"]):not([href$=".img"]):not([href$=".gif"]):not([href$=".pdf"]):not([href$=".tiff"]):not([href$=".mov"]):not([href$=".wav"]):not([href$=".mp3"]):not([href$=".mp4"]):not([href$=".ogg"]):not([href$=".webm"]):not([href$=".sql"]):not([href$=".zip"]):not([href$=".docx"]):not([href$=".git"]):not([href$=".json"]):not([href$=".xml"]):not([href$=".css"]):not([href$=".md"]):not([href$=".txt"]):not([href$=".js"]):not([href$=".jsx"]):not([href$=".csv"]):not([href$=".dmg"]):not([href$=".msi"]):not([href$=".tar"]):not([href$=".gz"])"#;
 /// CSS query selector for all relative links that includes MEDIA_IGNORE_SELECTOR
 const MEDIA_SELECTOR_RELATIVE: &str = r#"a[href^="/"]:not([href$=".ico"]):not([href$=".png"]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".xlsx"]):not([href$=".rtf"]):not([href$=".svg"]):not([href$=".webp"]):not([href$=".img"]):not([href$=".gif"]):not([href$=".pdf"]):not([href$=".tiff"]):not([href$=".mov"]):not([href$=".wav"]):not([href$=".mp3"]):not([href$=".mp4"]):not([href$=".ogg"]):not([href$=".webm"]):not([href$=".sql"]):not([href$=".zip"]):not([href$=".docx"]):not([href$=".git"]):not([href$=".json"]):not([href$=".xml"]):not([href$=".css"]):not([href$=".md"]):not([href$=".txt"]):not([href$=".js"]):not([href$=".jsx"]):not([href$=".csv"]):not([href$=".dmg"]):not([href$=".msi"]):not([href$=".tar"]):not([href$=".gz"])"#;
 /// CSS query selector for all common static MIME types.
@@ -32,12 +32,12 @@ fn build_absolute_selectors(url: &str) -> String {
             url.replacen("http://", "https://", 1)
         },
         r#"""#,
-        "],",
+        "i ],",
         "a[href^=",
         r#"""#,
         url,
         r#"""#,
-        "]",
+        "i ]",
         MEDIA_IGNORE_SELECTOR
     )
 }
@@ -57,7 +57,7 @@ pub fn domain_name(domain: &Url) -> &str {
 }
 
 /// html selector for valid web pages for domain.
-pub fn get_page_selectors(url: &str, subdomains: bool, tld: bool) -> Selector {
+pub fn get_page_selectors(url: &str, subdomains: bool, tld: bool) -> (Selector, String) {
     if tld || subdomains {
         let base = Url::parse(&url).expect("Invalid page URL");
         let dname = domain_name(&base);
@@ -91,14 +91,14 @@ pub fn get_page_selectors(url: &str, subdomains: bool, tld: bool) -> Selector {
                 r#"""#,
                 scheme,
                 r#"""#,
-                "]",
+                "i ]",
                 "[href*=",
                 r#"""#,
                 ".",
                 dname,
                 ".",
                 r#"""#,
-                "]",
+                "i ]",
                 MEDIA_IGNORE_SELECTOR
             )
         } else {
@@ -106,21 +106,24 @@ pub fn get_page_selectors(url: &str, subdomains: bool, tld: bool) -> Selector {
         };
 
         // static html group parse
-        Selector::parse(&string_concat::string_concat!(
-            tlds,
-            MEDIA_SELECTOR_RELATIVE,
-            ",",
-            absolute_selector,
-            ",",
-            MEDIA_SELECTOR_RELATIVE,
-            " ",
-            MEDIA_SELECTOR_STATIC,
-            ", ",
-            absolute_selector,
-            " ",
-            MEDIA_SELECTOR_STATIC
-        ))
-        .unwrap()
+        (
+            Selector::parse(&string_concat::string_concat!(
+                tlds,
+                MEDIA_SELECTOR_RELATIVE,
+                ",",
+                absolute_selector,
+                ",",
+                MEDIA_SELECTOR_RELATIVE,
+                " ",
+                MEDIA_SELECTOR_STATIC,
+                ", ",
+                absolute_selector,
+                " ",
+                MEDIA_SELECTOR_STATIC
+            ))
+            .unwrap(),
+            dname.to_owned(),
+        )
     } else {
         let absolute_selector = build_absolute_selectors(url);
         let static_html_selector = string_concat::string_concat!(
@@ -134,14 +137,17 @@ pub fn get_page_selectors(url: &str, subdomains: bool, tld: bool) -> Selector {
             MEDIA_SELECTOR_STATIC
         );
 
-        Selector::parse(&string_concat::string_concat!(
-            MEDIA_SELECTOR_RELATIVE,
-            ",",
-            absolute_selector,
-            ",",
-            static_html_selector
-        ))
-        .unwrap()
+        (
+            Selector::parse(&string_concat::string_concat!(
+                MEDIA_SELECTOR_RELATIVE,
+                ",",
+                absolute_selector,
+                ",",
+                static_html_selector
+            ))
+            .unwrap(),
+            String::from(""),
+        )
     }
 }
 
@@ -177,21 +183,18 @@ impl Page {
     }
 
     /// Find all href links and return them using CSS selectors.
-    pub fn links(&self, selector: &Selector, subdomains: bool, _tld: bool) -> HashSet<String> {
+    pub fn links(&self, selector: &(Selector, String)) -> HashSet<String> {
         let html = self.parse_html();
-        let anchors = html.select(selector);
+        let anchors = html.select(&selector.0);
+        let base_domain = &selector.1;
 
-        if subdomains {
-            // todo: use base from outside
-            let base_domain = domain_name(&self.base);
-
+        if !base_domain.is_empty() {
             anchors
                 .filter_map(|a| {
                     let abs = self.abs_path(a.value().attr("href").unwrap_or_default());
 
-                    // todo: add tld handling
                     if base_domain == domain_name(&abs) {
-                        Some(abs.to_string())
+                        Some(abs.to_string().to_lowercase())
                     } else {
                         None
                     }
@@ -228,9 +231,7 @@ async fn parse_links() {
 
     let link_result = "https://choosealicense.com/";
     let page: Page = Page::new(&link_result, &client).await;
-    let selectors: Selector = get_page_selectors(&link_result, false, false);
-
-    let links = page.links(&selectors, false, false);
+    let links = page.links(&get_page_selectors(&link_result, false, false));
 
     assert!(
         links.contains(&"https://choosealicense.com/about/".to_string()),

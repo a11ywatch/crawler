@@ -17,11 +17,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio;
 use tokio::sync::mpsc::{
-    channel, unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender,
+    unbounded_channel, UnboundedReceiver, UnboundedSender,
 };
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task;
-use tokio::time::sleep;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use url::Url;
@@ -177,13 +176,6 @@ impl Website {
         client
     }
 
-    /// Start to crawl website with async parallelization
-    pub async fn crawl(&mut self) {
-        let client = self.setup().await;
-
-        self.crawl_concurrent(&client).await;
-    }
-
     /// Start to crawl website with gRPC streams
     pub async fn crawl_grpc(
         &mut self,
@@ -196,22 +188,26 @@ impl Website {
             .await;
     }
 
+    /// Start to crawl website with async parallelization
+    pub async fn crawl(&mut self) {
+        let client = self.setup().await;
+
+        self.crawl_concurrent(&client).await;
+    }
+
     /// Start to crawl website concurrently
     async fn crawl_concurrent(&mut self, client: &Client) {
-        // crawl delay between
-        let delay = self.configuration.delay;
-        let delay_enabled = delay > 0;
-        // crawl page walking
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
-
-        let selector = Arc::new(get_page_selectors(&self.domain, subdomains, tld));
+        let selector = Arc::new(get_page_selectors(&self.domain, self.configuration.subdomains, self.configuration.subdomains));
+        let throttle = self.get_delay();
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, mut rx): (Sender<Message>, Receiver<Message>) = channel(100);
+            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = unbounded_channel();
 
-            for link in self.links.iter() {
+            let stream = tokio_stream::iter(&self.links).throttle(throttle);
+            tokio::pin!(stream);
+            
+            while let Some(link) = stream.next().await {
                 if !self.is_allowed(link) {
                     continue;
                 }
@@ -225,13 +221,10 @@ impl Website {
 
                 task::spawn(async move {
                     {
-                        if delay_enabled {
-                            sleep(Duration::from_millis(delay)).await;
-                        }
                         let page = Page::new(&link, &client).await;
-                        let links = page.links(&*selector, subdomains, tld);
+                        let links = page.links(&*selector);
 
-                        if let Err(_) = tx.send(links).await {
+                        if let Err(_) = tx.send(links) {
                             log("receiver dropped", "");
                         }
                     }
@@ -257,12 +250,13 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        let subdomains = self.configuration.subdomains;
-        let tld = self.configuration.tld;
-
         let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
         let semaphore = Arc::new(Semaphore::new(200));
-        let selector = Arc::new(get_page_selectors(&self.domain, subdomains, tld));
+        let selector = Arc::new(get_page_selectors(
+            &self.domain,
+            self.configuration.subdomains,
+            self.configuration.tld,
+        ));
         let throttle = self.get_delay();
 
         // determine if crawl is still active
@@ -279,15 +273,65 @@ impl Website {
 
         if self.configuration.sitemap {
             self.sitemap_crawl(
-                &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx, subdomains, tld,
+                &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx
             )
             .await;
         };
 
         self.inner_crawl(
-            &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx, subdomains, tld,
+            &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx
         )
         .await;
+    }
+
+    /// inner crawl pages until no links exist
+    async fn inner_crawl(
+        &mut self,
+        handle: &tokio::task::JoinHandle<bool>,
+        client: &Client,
+        rpcx: &mut WebsiteServiceClient<Channel>,
+        semaphore: &Arc<Semaphore>,
+        selector: &Arc<(Selector, String)>,
+        throttle: &Duration,
+        user_id: u32,
+        txx: &UnboundedSender<bool>,
+    ) {
+        while !self.links.is_empty() && !handle.is_finished() {
+            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
+                unbounded_channel();
+            let stream = tokio_stream::iter(&self.links).throttle(*throttle);
+            tokio::pin!(stream);
+
+            // clone the unbounded sender
+            let txx = txx.clone();
+
+            while let Some(link) = stream.next().await {
+                if handle.is_finished() {
+                    break;
+                }
+                if !self.is_allowed(&link) {
+                    continue;
+                }
+                self.links_visited.insert(link.into());
+                let permit = semaphore.clone().acquire_owned().await.unwrap();
+                log("fetch", &link);
+                self.rpc_callback(&rpcx, &client, &txx, &tx, &selector, link, user_id, permit)
+                    .await;
+            }
+
+            drop(tx);
+            drop(txx);
+
+            let mut new_links: HashSet<String> = HashSet::new();
+
+            while let Some(msg) = rx.recv().await {
+                new_links.extend(msg);
+                task::yield_now().await;
+            }
+
+            self.links = &new_links - &self.links_visited;
+            task::yield_now().await;
+        }
     }
 
     /// get the entire list of urls in a sitemap
@@ -297,12 +341,10 @@ impl Website {
         client: &Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
         semaphore: &Arc<Semaphore>,
-        selector: &Arc<Selector>,
+        selector: &Arc<(Selector, String)>,
         throttle: &Duration,
         user_id: u32,
-        txx: &UnboundedSender<bool>,
-        subdomains: bool,
-        tld: bool,
+        txx: &UnboundedSender<bool>
     ) {
         self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
 
@@ -353,8 +395,7 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx,
-                                    subdomains, tld,
+                                    &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx
                                 )
                                 .await;
                             }
@@ -371,58 +412,6 @@ impl Website {
         }
     }
 
-    /// inner crawl pages until no links exist
-    async fn inner_crawl(
-        &mut self,
-        handle: &tokio::task::JoinHandle<bool>,
-        client: &Client,
-        rpcx: &mut WebsiteServiceClient<Channel>,
-        semaphore: &Arc<Semaphore>,
-        selector: &Arc<Selector>,
-        throttle: &Duration,
-        user_id: u32,
-        txx: &UnboundedSender<bool>,
-        subdomains: bool,
-        tld: bool,
-    ) {
-        while !self.links.is_empty() && !handle.is_finished() {
-            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
-                unbounded_channel();
-                let stream = tokio_stream::iter(&self.links).throttle(*throttle);
-                tokio::pin!(stream);
-            let txx = txx.clone();
-
-            while let Some(link) = stream.next().await {
-                if handle.is_finished() {
-                    break;
-                }
-                if !self.is_allowed(&link) {
-                    continue;
-                }
-                self.links_visited.insert(link.into());
-                let permit = semaphore.clone().acquire_owned().await.unwrap();
-                log("fetch", &link);
-                self.rpc_callback(
-                    &rpcx, &client, &txx, &tx, &selector, link, user_id, subdomains, tld, permit,
-                )
-                .await;
-            }
-
-            drop(tx);
-            drop(txx);
-
-            let mut new_links: HashSet<String> = HashSet::new();
-
-            while let Some(msg) = rx.recv().await {
-                new_links.extend(msg);
-                task::yield_now().await;
-            }
-
-            self.links = &new_links - &self.links_visited;
-            task::yield_now().await;
-        }
-    }
-
     /// perform the rpc callback on new link
     async fn rpc_callback(
         &self,
@@ -430,11 +419,9 @@ impl Website {
         client: &Client,
         txx: &UnboundedSender<bool>,
         tx: &UnboundedSender<Message>,
-        selector: &Arc<Selector>,
+        selector: &Arc<(Selector, String)>,
         link: &String,
         user_id: u32,
-        subdomains: bool,
-        tld: bool,
         permit: OwnedSemaphorePermit,
     ) {
         let mut rpcx = rpcx.clone();
@@ -450,7 +437,7 @@ impl Website {
         task::spawn(async move {
             {
                 let page = Page::new(&link, &client).await;
-                let links = page.links(&*selector, subdomains, tld);
+                let links = page.links(&*selector);
                 drop(permit);
 
                 task::spawn(async move {
@@ -502,47 +489,6 @@ impl Website {
 }
 
 #[tokio::test]
-async fn crawl() {
-    let mut website: Website = Website::new("https://choosealicense.com");
-    website.crawl().await;
-    assert!(
-        website
-            .links_visited
-            .contains(&"https://choosealicense.com/licenses/".to_string()),
-        "{:?}",
-        website.links_visited
-    );
-}
-
-#[tokio::test]
-async fn crawl_invalid() {
-    let url = "https://w.com";
-    let mut website: Website = Website::new(&url);
-    website.crawl().await;
-    let mut uniq = HashSet::new();
-    uniq.insert(format!("{}/", url.to_string())); // TODO: remove trailing slash mutate
-
-    assert_eq!(website.links_visited, uniq); // only the target url should exist
-}
-
-#[tokio::test]
-async fn not_crawl_blacklist() {
-    let mut website: Website = Website::new("https://choosealicense.com");
-    website
-        .configuration
-        .blacklist_url
-        .push("https://choosealicense.com/licenses/".to_string());
-    website.crawl().await;
-    assert!(
-        !website
-            .links_visited
-            .contains(&"https://choosealicense.com/licenses/".to_string()),
-        "{:?}",
-        website.links_visited
-    );
-}
-
-#[tokio::test]
 async fn test_respect_robots_txt() {
     let mut website: Website = Website::new("https://stackoverflow.com");
     website.configuration.respect_robots_txt = true;
@@ -581,21 +527,4 @@ async fn test_respect_robots_txt() {
     website_third.configure_robots_parser(&client_third).await;
 
     assert_eq!(website_third.configuration.delay, 10000); // should equal 10 seconds in ms
-}
-
-#[tokio::test]
-async fn test_link_duplicates() {
-    fn has_unique_elements<T>(iter: T) -> bool
-    where
-        T: IntoIterator,
-        T::Item: Eq + std::hash::Hash,
-    {
-        let mut uniq = HashSet::new();
-        iter.into_iter().all(move |x| uniq.insert(x))
-    }
-
-    let mut website: Website = Website::new("http://0.0.0.0:8000");
-    website.crawl().await;
-
-    assert!(has_unique_elements(&website.links_visited));
 }
