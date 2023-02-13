@@ -97,8 +97,7 @@ impl Website {
             let mut robot_file_parser: RobotFileParser = match &self.robot_file_parser {
                 Some(parser) => parser.to_owned(),
                 _ => {
-                    let mut robot_file_parser =
-                        RobotFileParser::new(&string_concat!(self.domain, "robots.txt"));
+                    let mut robot_file_parser = RobotFileParser::new();
 
                     robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
 
@@ -108,7 +107,7 @@ impl Website {
 
             // get the latest robots todo determine time elaspe
             if robot_file_parser.mtime() <= 4000 {
-                robot_file_parser.read(client).await;
+                robot_file_parser.read(&client, &self.domain).await;
                 self.configuration.delay = robot_file_parser
                     .get_crawl_delay(&robot_file_parser.user_agent) // returns the crawl delay in seconds
                     .unwrap_or_else(|| self.get_delay())

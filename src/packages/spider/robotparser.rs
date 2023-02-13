@@ -14,11 +14,13 @@
 //! ```rust,ignore
 //! extern crate spider;
 //!
-//! use spider::packages::robotparser::RobotFileParser;
+//! use spider::robotparser::RobotFileParser;
+//! use reqwest::blocking::Client;
 //!
 //! fn main() {
-//!     let parser = RobotFileParser::new("http://www.python.org/robots.txt");
-//!     parser.read();
+//!     let parser = RobotFileParser::new();
+//!     let client = Client::new();
+//!     parser.read(&client, &"http://www.python.org/robots.txt");
 //!     assert!(parser.can_fetch("*", "http://www.python.org/robots.txt"));
 //! }
 //! ```
@@ -28,7 +30,6 @@ use reqwest::Client;
 use reqwest::Response;
 use reqwest::StatusCode;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use url::Url;
 
 /// A rule line is a single "Allow:" (allowance==True) or "Disallow:"
 /// (allowance==False) followed by a path."""
@@ -73,8 +74,6 @@ pub struct RobotFileParser {
     disallow_all: bool,
     /// Allow links reguardless of robots.txt
     allow_all: bool,
-    /// Url of the website
-    url: Url,
     /// Time last checked robots.txt file
     last_checked: i64,
     /// User-agent string
@@ -184,15 +183,12 @@ impl Default for Entry {
 
 impl RobotFileParser {
     /// Establish a new robotparser for a website domain
-    pub fn new<T: AsRef<str>>(url: T) -> RobotFileParser {
-        let parsed_url = Url::parse(url.as_ref()).unwrap();
-
+    pub fn new() -> RobotFileParser {
         RobotFileParser {
             entries: vec![],
             default_entry: Entry::new(),
             disallow_all: false,
             allow_all: false,
-            url: parsed_url,
             last_checked: 0i64,
             user_agent: String::from("robotparser-rs"),
         }
@@ -216,16 +212,9 @@ impl RobotFileParser {
         self.last_checked = now;
     }
 
-    /// Sets the URL referring to a robots.txt file.
-    pub fn set_url<T: AsRef<str>>(&mut self, url: T) {
-        let parsed_url = Url::parse(url.as_ref()).unwrap();
-        self.url = parsed_url;
-        self.last_checked = 0i64;
-    }
-
     /// Reads the robots.txt URL and feeds it to the parser.
-    pub async fn read(&mut self, client: &Client) {
-        let request = client.get(self.url.as_ref());
+    pub async fn read(&mut self, client: &Client, url: &str) {
+        let request = client.get(&string_concat!(url, "robots.txt"));
         let request = request.header(USER_AGENT, &self.user_agent);
         let res = match request.send().await {
             Ok(res) => res,
