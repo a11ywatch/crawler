@@ -56,11 +56,11 @@ import "@a11ywatch/crawler";
 
 ## Example
 
-This is a basic blocking example crawling a web page, add spider to your `Cargo.toml`:
+This is a basic example crawling a web page, add spider to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-website_crawler = "0.6.54"
+website_crawler = "0.7.36"
 ```
 
 And then the code:
