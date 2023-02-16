@@ -60,7 +60,7 @@ This is a basic example crawling a web page, add spider to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-website_crawler = "0.7.36"
+website_crawler = "0.7.38"
 ```
 
 And then the code:

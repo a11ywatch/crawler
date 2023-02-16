@@ -23,4 +23,5 @@ message ScanRequest {
     bool tld = 6; // allow tld crawling all . ext.
     string proxy = 7; // connect to proxy.
     bool sitemap = 8; // extend crawl with sitemap links.
+    uint64 delay = 9; // the delay throttle between links.
 }

@@ -13,11 +13,12 @@ pub async fn crawl(
     tld: bool,
     proxy: String,
     sitemap: bool,
+    delay: u64,
 ) -> Result<(), core::fmt::Error> {
     let mut website: Website = Website::new(&domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
-    website.configuration.delay = 0;
+    website.configuration.delay = delay;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
     website.configuration.proxy = proxy;

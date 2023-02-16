@@ -26,6 +26,7 @@ impl Crawler for MyCrawler {
         let id = req.id;
         let proxy = req.proxy;
         let sitemap = req.sitemap;
+        let delay = req.delay;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
@@ -41,6 +42,7 @@ impl Crawler for MyCrawler {
                 tld,
                 proxy,
                 sitemap,
+                delay,
             )
             .await
             .unwrap_or_default();
@@ -60,6 +62,7 @@ impl Crawler for MyCrawler {
         let id = req.id;
         let proxy = req.proxy;
         let sitemap = req.sitemap;
+        let delay = req.delay;
 
         let reply = crawler::ScanReply {
             message: format!("scanning - {:?}", &url).into(),
@@ -75,6 +78,7 @@ impl Crawler for MyCrawler {
                 tld,
                 proxy,
                 sitemap,
+                delay,
             )
             .await
             .unwrap_or_default();
