@@ -1,6 +1,6 @@
 use super::black_list::contains;
 use super::configuration::Configuration;
-use super::page::{build, Page, get_page_selectors};
+use super::page::{build, get_page_selectors, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
@@ -16,9 +16,7 @@ use sitemap::{
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
-use tokio::sync::mpsc::{
-    unbounded_channel, UnboundedReceiver, UnboundedSender,
-};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task;
 use tokio_stream::StreamExt;
@@ -45,8 +43,6 @@ pub struct Website {
     links: HashSet<String>,
     /// contains all visited URL.
     links_visited: HashSet<String>,
-    /// contains page visited
-    pages: Vec<Page>,
     /// Robot.txt parser holder.
     robot_file_parser: Option<RobotFileParser>,
     /// current sitemap url
@@ -66,7 +62,6 @@ impl Website {
             links_visited: HashSet::new(),
             links: HashSet::from([domain_base.clone()]), // todo: remove dup mem usage for domain tracking
             domain: domain_base,
-            pages: Vec::new(),
             robot_file_parser: None,
             sitemap_url: String::from(""),
         }
@@ -74,11 +69,7 @@ impl Website {
 
     /// page clone
     pub fn get_pages(&self) -> Vec<Page> {
-        if !self.pages.is_empty() {
-            self.pages.clone()
-        } else {
-            self.links_visited.iter().map(|l| build(l, "")).collect()
-        }
+        self.links_visited.iter().map(|l| build(l, "")).collect()
     }
 
     /// links visited getter
@@ -196,16 +187,21 @@ impl Website {
 
     /// Start to crawl website concurrently
     async fn crawl_concurrent(&mut self, client: &Client) {
-        let selector = Arc::new(get_page_selectors(&self.domain, self.configuration.subdomains, self.configuration.subdomains));
+        let selector = Arc::new(get_page_selectors(
+            &self.domain,
+            self.configuration.subdomains,
+            self.configuration.subdomains,
+        ));
         let throttle = self.get_delay();
 
         // crawl while links exists
         while !self.links.is_empty() {
-            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) = unbounded_channel();
+            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
+                unbounded_channel();
 
             let stream = tokio_stream::iter(&self.links).throttle(throttle);
             tokio::pin!(stream);
-            
+
             while let Some(link) = stream.next().await {
                 if !self.is_allowed(link) {
                     continue;
@@ -256,6 +252,7 @@ impl Website {
             self.configuration.subdomains,
             self.configuration.tld,
         ));
+        let rpcx = Arc::new(rpcx);
         let throttle = self.get_delay();
 
         // determine if crawl is still active
@@ -272,13 +269,13 @@ impl Website {
 
         if self.configuration.sitemap {
             self.sitemap_crawl(
-                &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx
+                &handle, client, &rpcx, &semaphore, &selector, &throttle, user_id, &txx,
             )
             .await;
         };
 
         self.inner_crawl(
-            &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx
+            &handle, client, &rpcx, &semaphore, &selector, &throttle, user_id, &txx,
         )
         .await;
     }
@@ -288,7 +285,7 @@ impl Website {
         &mut self,
         handle: &tokio::task::JoinHandle<bool>,
         client: &Client,
-        rpcx: &mut WebsiteServiceClient<Channel>,
+        rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
         semaphore: &Arc<Semaphore>,
         selector: &Arc<(Selector, String)>,
         throttle: &Duration,
@@ -338,12 +335,12 @@ impl Website {
         &mut self,
         handle: &tokio::task::JoinHandle<bool>,
         client: &Client,
-        rpcx: &mut WebsiteServiceClient<Channel>,
+        rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
         semaphore: &Arc<Semaphore>,
         selector: &Arc<(Selector, String)>,
         throttle: &Duration,
         user_id: u32,
-        txx: &UnboundedSender<bool>
+        txx: &UnboundedSender<bool>,
     ) {
         self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
 
@@ -394,7 +391,8 @@ impl Website {
 
                                 // crawl between each link
                                 self.inner_crawl(
-                                    &handle, client, rpcx, &semaphore, &selector, &throttle, user_id, &txx
+                                    &handle, client, rpcx, &semaphore, &selector, &throttle,
+                                    user_id, &txx,
                                 )
                                 .await;
                             }
