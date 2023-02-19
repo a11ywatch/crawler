@@ -268,10 +268,8 @@ impl Website {
         });
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(
-                &handle, client, &rpcx, &semaphore, user_id, &txx,
-            )
-            .await;
+            self.sitemap_crawl(&handle, client, &rpcx, &semaphore, user_id, &txx)
+                .await;
         };
 
         self.inner_crawl(
@@ -431,23 +429,21 @@ impl Website {
             {
                 let page = Page::new(&link, &client).await;
                 let links = page.links(&*selector);
+                let x = monitor(&mut rpcx, link, user_id, page.html).await;
+
                 drop(permit);
 
-                task::spawn(async move {
-                    let x = monitor(&mut rpcx, link, user_id, page.html).await;
-
-                    if let Err(_) = txx.send(x) {
-                        log("receiver dropped", "");
-                    }
-                });
+                if let Err(_) = txx.send(x) {
+                    log("receiver dropped", "");
+                };
 
                 if let Err(_) = tx.send(links) {
                     log("receiver dropped", "");
                 }
             }
+            task::yield_now().await;
         });
     }
-
 
     /// perform the rpc callback raw without links
     async fn rpc_callback_raw(
