@@ -269,7 +269,7 @@ impl Website {
 
         if self.configuration.sitemap {
             self.sitemap_crawl(
-                &handle, client, &rpcx, &semaphore, &selector, &throttle, user_id, &txx,
+                &handle, client, &rpcx, &semaphore, user_id, &txx,
             )
             .await;
         };
@@ -337,8 +337,6 @@ impl Website {
         client: &Client,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
         semaphore: &Arc<Semaphore>,
-        selector: &Arc<(Selector, String)>,
-        throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
     ) {
@@ -366,6 +364,11 @@ impl Website {
                                                 continue;
                                             };
 
+                                            self.rpc_callback_raw(
+                                                &rpcx, &client, &txx, &link, user_id, semaphore,
+                                            )
+                                            .await;
+
                                             self.links.insert(link);
                                         }
                                         Location::ParseErr(error) => {
@@ -388,13 +391,6 @@ impl Website {
                                         log("incorrect sitemap error: ", err.msg())
                                     }
                                 };
-
-                                // crawl between each link
-                                self.inner_crawl(
-                                    &handle, client, rpcx, &semaphore, &selector, &throttle,
-                                    user_id, &txx,
-                                )
-                                .await;
                             }
                         }
                         Err(err) => log("http parse error: ", err.to_string()),
@@ -449,6 +445,39 @@ impl Website {
                     log("receiver dropped", "");
                 }
             }
+        });
+    }
+
+
+    /// perform the rpc callback raw without links
+    async fn rpc_callback_raw(
+        &self,
+        rpcx: &WebsiteServiceClient<Channel>,
+        client: &Client,
+        txx: &UnboundedSender<bool>,
+        link: &String,
+        user_id: u32,
+        semaphore: &Arc<Semaphore>,
+    ) {
+        let mut rpcx = rpcx.clone();
+        let txx = txx.clone();
+        task::yield_now().await;
+        let client = client.clone();
+        let link = link.clone();
+        let permit = semaphore.clone().acquire_owned().await.unwrap();
+        task::yield_now().await;
+
+        task::spawn(async move {
+            {
+                let page = Page::new(&link, &client).await;
+                let x = monitor(&mut rpcx, link, user_id, page.html).await;
+                drop(permit);
+
+                if let Err(_) = txx.send(x) {
+                    log("receiver dropped", "");
+                }
+            }
+            task::yield_now().await;
         });
     }
 
