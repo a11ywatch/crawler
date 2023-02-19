@@ -168,8 +168,8 @@ impl Page {
     }
 
     /// URL getter for page.
-    pub fn get_url(&self) -> String {
-        self.base.to_string()
+    pub fn get_url(&self) -> &str {
+        &self.base.as_str()
     }
 
     /// Html getter for page.
@@ -177,14 +177,9 @@ impl Page {
         &self.html
     }
 
-    /// HTML returned from Scraper.
-    fn parse_html(&self) -> Html {
-        Html::parse_document(&self.html)
-    }
-
     /// Find all href links and return them using CSS selectors.
     pub fn links(&self, selector: &(Selector, String)) -> HashSet<String> {
-        let html = self.parse_html();
+        let html = Html::parse_document(&self.html);
         let anchors = html.select(&selector.0);
         let base_domain = &selector.1;
 
@@ -194,7 +189,7 @@ impl Page {
                     let abs = self.abs_path(a.value().attr("href").unwrap_or_default());
 
                     if base_domain == domain_name(&abs) {
-                        Some(abs.to_string().to_lowercase())
+                        Some(abs.as_str().to_lowercase())
                     } else {
                         None
                     }
@@ -204,7 +199,8 @@ impl Page {
             anchors
                 .map(|a| {
                     self.abs_path(a.value().attr("href").unwrap_or_default())
-                        .to_string()
+                        .as_str()
+                        .to_lowercase()
                 })
                 .collect()
         }
@@ -217,7 +213,7 @@ impl Page {
                 joined.set_fragment(None);
                 joined
             }
-            Err(_) => Url::parse(&self.get_url()).expect("Invalid page URL"),
+            Err(_) => self.base.clone(),
         }
     }
 }
