@@ -189,7 +189,7 @@ impl Page {
                     let abs = self.abs_path(a.value().attr("href").unwrap_or_default());
 
                     if base_domain == domain_name(&abs) {
-                        Some(abs.as_str().to_lowercase())
+                        Some(abs.as_str().into())
                     } else {
                         None
                     }
@@ -200,7 +200,7 @@ impl Page {
                 .map(|a| {
                     self.abs_path(a.value().attr("href").unwrap_or_default())
                         .as_str()
-                        .to_lowercase()
+                        .into()
                 })
                 .collect()
         }
