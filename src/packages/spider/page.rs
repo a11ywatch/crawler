@@ -1,4 +1,5 @@
 use super::utils::fetch_page_html;
+use super::website::CaseInsensitiveString;
 use hashbrown::HashSet;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -178,7 +179,7 @@ impl Page {
     }
 
     /// Find all href links and return them using CSS selectors.
-    pub fn links(&self, selector: &(Selector, String)) -> HashSet<String> {
+    pub fn links(&self, selector: &(Selector, String)) -> HashSet<CaseInsensitiveString> {
         let html = Html::parse_document(&self.html);
         let anchors = html.select(&selector.0);
         let base_domain = &selector.1;
@@ -230,7 +231,7 @@ async fn parse_links() {
     let links = page.links(&get_page_selectors(&link_result, false, false));
 
     assert!(
-        links.contains(&"https://choosealicense.com/about/".to_string()),
+        links.contains::<CaseInsensitiveString>(&"https://choosealicense.com/about/".into()),
         "Could not find {}. Theses URLs was found {:?}",
         page.get_url(),
         &links

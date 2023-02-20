@@ -22,6 +22,45 @@ use tokio::task;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use url::Url;
+use std::hash::{Hash, Hasher};
+
+/// case-insensitive string handling
+#[derive(Debug, Clone)]
+pub struct CaseInsensitiveString(String);
+
+impl PartialEq for CaseInsensitiveString {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq_ignore_ascii_case(&other.0)
+    }
+}
+
+impl Eq for CaseInsensitiveString {}
+
+impl Hash for CaseInsensitiveString {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for c in self.0.as_bytes() {
+            c.to_ascii_lowercase().hash(state)
+        }
+    }
+}
+
+impl From<&str> for CaseInsensitiveString {
+    fn from(s: &str) -> Self {
+        CaseInsensitiveString { 0: s.into() }
+    }
+}
+
+impl From<String> for CaseInsensitiveString {
+    fn from(s: String) -> Self {
+        CaseInsensitiveString { 0: s }
+    }
+}
+
+impl AsRef<str> for CaseInsensitiveString {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -40,9 +79,9 @@ pub struct Website {
     /// the domain name of the website
     domain: String,
     /// contains all non-visited URL.
-    links: HashSet<String>,
+    links: HashSet<CaseInsensitiveString>,
     /// contains all visited URL.
-    links_visited: HashSet<String>,
+    links_visited: HashSet<CaseInsensitiveString>,
     /// Robot.txt parser holder.
     robot_file_parser: Option<RobotFileParser>,
     /// current sitemap url
@@ -50,7 +89,7 @@ pub struct Website {
 }
 
 /// hashset string_concat
-pub type Message = HashSet<String>;
+pub type Message = HashSet<CaseInsensitiveString>;
 
 impl Website {
     /// Initialize Website object with a start link to crawl.
@@ -60,7 +99,7 @@ impl Website {
         Self {
             configuration: Configuration::new(),
             links_visited: HashSet::new(),
-            links: HashSet::from([domain_base.clone()]), // todo: remove dup mem usage for domain tracking
+            links: HashSet::from([domain_base.clone().into()]), // todo: remove dup mem usage for domain tracking
             domain: domain_base,
             robot_file_parser: None,
             sitemap_url: String::from(""),
@@ -69,11 +108,11 @@ impl Website {
 
     /// page clone
     pub fn get_pages(&self) -> Vec<Page> {
-        self.links_visited.iter().map(|l| build(l, "")).collect()
+        self.links_visited.iter().map(|l| build(&l.0, Default::default())).collect()
     }
 
     /// links visited getter
-    pub fn get_links(&self) -> &HashSet<String> {
+    pub fn get_links(&self) -> &HashSet<CaseInsensitiveString> {
         &self.links_visited
     }
 
@@ -202,21 +241,21 @@ impl Website {
             let stream = tokio_stream::iter(&self.links).throttle(throttle);
             tokio::pin!(stream);
 
-            while let Some(link) = stream.next().await {
-                if !self.is_allowed(link) {
+            while let Some(l) = stream.next().await {
+                if !self.is_allowed(l) {
                     continue;
                 }
-                log("fetch", &link);
-                self.links_visited.insert(link.into());
+                log("fetch", &l);
+                let link = l.clone();
+                self.links_visited.insert(l.to_owned());
 
                 let tx = tx.clone();
                 let client = client.clone();
-                let link = link.clone();
                 let selector = selector.clone();
 
                 task::spawn(async move {
                     {
-                        let page = Page::new(&link, &client).await;
+                        let page = Page::new(&link.0, &client).await;
                         let links = page.links(&*selector);
 
                         if let Err(_) = tx.send(links) {
@@ -228,7 +267,7 @@ impl Website {
 
             drop(tx);
 
-            let mut new_links: HashSet<String> = HashSet::new();
+            let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
 
             while let Some(msg) = rx.recv().await {
                 new_links.extend(msg);
@@ -306,17 +345,17 @@ impl Website {
                 if !self.is_allowed(&link) {
                     continue;
                 }
-                self.links_visited.insert(link.into());
+                self.links_visited.insert(link.clone());
                 let permit = semaphore.clone().acquire_owned().await.unwrap();
                 log("fetch", &link);
-                self.rpc_callback(&rpcx, &client, &txx, &tx, &selector, link, user_id, permit)
+                self.rpc_callback(&rpcx, &client, &txx, &tx, &selector, &link.0, user_id, permit)
                     .await;
             }
 
             drop(tx);
             drop(txx);
 
-            let mut new_links: HashSet<String> = HashSet::new();
+            let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
 
             while let Some(msg) = rx.recv().await {
                 new_links.extend(msg);
@@ -363,7 +402,7 @@ impl Website {
                                             };
 
                                             self.rpc_callback_raw(
-                                                &rpcx, &client, &txx, &link, user_id, semaphore,
+                                                &rpcx, &client, &txx, &link.0, user_id, semaphore,
                                             )
                                             .await;
 
@@ -482,14 +521,8 @@ impl Website {
     /// - is not already crawled
     /// - is not blacklisted
     /// - is not forbidden in robot.txt file (if parameter is defined)  
-    pub fn is_allowed(&self, link: &String) -> bool {
-        if self.links_visited.contains(link) {
-            return false;
-        }
-        if contains(&self.configuration.blacklist_url, link) {
-            return false;
-        }
-        if self.configuration.respect_robots_txt && !self.is_allowed_robots(link) {
+    pub fn is_allowed(&self, link: &CaseInsensitiveString) -> bool {
+        if self.links_visited.contains(link) || contains(&self.configuration.blacklist_url, &link.0) || self.configuration.respect_robots_txt && !self.is_allowed_robots(&link.0) {
             return false;
         }
 
@@ -521,7 +554,7 @@ async fn test_respect_robots_txt() {
 
     assert_eq!(website.configuration.delay, 250);
 
-    assert!(!website.is_allowed(&"https://stackoverflow.com/posts/".to_string()));
+    assert!(!website.is_allowed(&"https://stackoverflow.com/posts/".into()));
 
     // test match for bing bot
     let mut website_second: Website = Website::new("https://www.mongodb.com");
