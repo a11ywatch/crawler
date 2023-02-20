@@ -38,6 +38,7 @@ pub mod website;
 /// Black list checking url exist.
 pub mod black_list {
     /// check if link exist in blacklists.
+    #[inline]
     pub fn contains(blacklist_url: &Vec<String>, link: &String) -> bool {
         blacklist_url.contains(&link)
     }

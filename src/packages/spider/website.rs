@@ -13,6 +13,7 @@ use sitemap::{
     reader::{SiteMapEntity, SiteMapReader},
     structs::Location,
 };
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
@@ -22,13 +23,13 @@ use tokio::task;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use url::Url;
-use std::hash::{Hash, Hasher};
 
 /// case-insensitive string handling
 #[derive(Debug, Clone)]
 pub struct CaseInsensitiveString(String);
 
 impl PartialEq for CaseInsensitiveString {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq_ignore_ascii_case(&other.0)
     }
@@ -37,6 +38,7 @@ impl PartialEq for CaseInsensitiveString {
 impl Eq for CaseInsensitiveString {}
 
 impl Hash for CaseInsensitiveString {
+    #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
         for c in self.0.as_bytes() {
             c.to_ascii_lowercase().hash(state)
@@ -45,6 +47,7 @@ impl Hash for CaseInsensitiveString {
 }
 
 impl From<&str> for CaseInsensitiveString {
+    #[inline]
     fn from(s: &str) -> Self {
         CaseInsensitiveString { 0: s.into() }
     }
@@ -57,6 +60,7 @@ impl From<String> for CaseInsensitiveString {
 }
 
 impl AsRef<str> for CaseInsensitiveString {
+    #[inline]
     fn as_ref(&self) -> &str {
         &self.0
     }
@@ -108,7 +112,10 @@ impl Website {
 
     /// page clone
     pub fn get_pages(&self) -> Vec<Page> {
-        self.links_visited.iter().map(|l| build(&l.0, Default::default())).collect()
+        self.links_visited
+            .iter()
+            .map(|l| build(&l.0, Default::default()))
+            .collect()
     }
 
     /// links visited getter
@@ -232,6 +239,7 @@ impl Website {
             self.configuration.subdomains,
         ));
         let throttle = self.get_delay();
+        let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
 
         // crawl while links exists
         while !self.links.is_empty() {
@@ -267,13 +275,15 @@ impl Website {
 
             drop(tx);
 
-            let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
-
             while let Some(msg) = rx.recv().await {
                 new_links.extend(msg);
             }
 
             self.links = &new_links - &self.links_visited;
+            new_links.clear();
+            if new_links.capacity() > 100 {
+                new_links.shrink_to_fit()
+            }
         }
     }
 
@@ -329,6 +339,8 @@ impl Website {
         user_id: u32,
         txx: &UnboundedSender<bool>,
     ) {
+        let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
+
         while !self.links.is_empty() && !handle.is_finished() {
             let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
                 unbounded_channel();
@@ -348,14 +360,14 @@ impl Website {
                 self.links_visited.insert(link.clone());
                 let permit = semaphore.clone().acquire_owned().await.unwrap();
                 log("fetch", &link);
-                self.rpc_callback(&rpcx, &client, &txx, &tx, &selector, &link.0, user_id, permit)
-                    .await;
+                self.rpc_callback(
+                    &rpcx, &client, &txx, &tx, &selector, &link.0, user_id, permit,
+                )
+                .await;
             }
 
             drop(tx);
             drop(txx);
-
-            let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
 
             while let Some(msg) = rx.recv().await {
                 new_links.extend(msg);
@@ -363,6 +375,10 @@ impl Website {
             }
 
             self.links = &new_links - &self.links_visited;
+            new_links.clear();
+            if new_links.capacity() > 100 {
+                new_links.shrink_to_fit()
+            }
             task::yield_now().await;
         }
     }
@@ -520,9 +536,12 @@ impl Website {
     ///
     /// - is not already crawled
     /// - is not blacklisted
-    /// - is not forbidden in robot.txt file (if parameter is defined)  
+    /// - is not forbidden in robot.txt file (if parameter is defined)
     pub fn is_allowed(&self, link: &CaseInsensitiveString) -> bool {
-        if self.links_visited.contains(link) || contains(&self.configuration.blacklist_url, &link.0) || self.configuration.respect_robots_txt && !self.is_allowed_robots(&link.0) {
+        if self.links_visited.contains(link)
+            || contains(&self.configuration.blacklist_url, &link.0)
+            || self.configuration.respect_robots_txt && !self.is_allowed_robots(&link.0)
+        {
             return false;
         }
 
@@ -531,7 +550,7 @@ impl Website {
 
     /// return `true` if URL:
     ///
-    /// - is not forbidden in robot.txt file (if parameter is defined)  
+    /// - is not forbidden in robot.txt file (if parameter is defined)
     pub fn is_allowed_robots(&self, link: &String) -> bool {
         if self.configuration.respect_robots_txt {
             let robot_file_parser = self.robot_file_parser.as_ref().unwrap(); // unwrap will always return

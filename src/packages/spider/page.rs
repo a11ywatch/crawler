@@ -152,7 +152,7 @@ pub fn get_page_selectors(url: &str, subdomains: bool, tld: bool) -> (Selector, 
     }
 }
 
-/// Instanciate a new page without scraping it (used for testing purposes).
+/// Instantiate a new page without scraping it (used for testing purposes).
 pub fn build(url: &str, html: &str) -> Page {
     Page {
         html: html.into(),
