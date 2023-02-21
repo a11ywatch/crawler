@@ -1941,6 +1941,7 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
+ "parking_lot",
  "pin-project-lite",
  "socket2",
  "tokio-macros",
@@ -2384,7 +2385,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.7.48"
+version = "0.7.50"
 dependencies = [
  "cc",
  "env_logger",
