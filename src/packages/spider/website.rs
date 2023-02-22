@@ -279,7 +279,7 @@ impl Website {
                 new_links.extend(msg);
             }
 
-            self.links = &new_links - &self.links_visited;
+            self.links.clone_from(&(&new_links - &self.links_visited));
             new_links.clear();
             if new_links.capacity() > 100 {
                 new_links.shrink_to_fit()
@@ -374,7 +374,7 @@ impl Website {
                 task::yield_now().await;
             }
 
-            self.links = &new_links - &self.links_visited;
+            self.links.clone_from(&(&new_links - &self.links_visited));
             new_links.clear();
             if new_links.capacity() > 100 {
                 new_links.shrink_to_fit()
@@ -551,7 +551,7 @@ impl Website {
     /// return `true` if URL:
     ///
     /// - is not forbidden in robot.txt file (if parameter is defined)
-    pub fn is_allowed_robots(&self, link: &String) -> bool {
+    pub fn is_allowed_robots(&self, link: &str) -> bool {
         if self.configuration.respect_robots_txt {
             let robot_file_parser = self.robot_file_parser.as_ref().unwrap(); // unwrap will always return
 
