@@ -87,7 +87,7 @@ pub struct Website {
     /// contains all visited URL.
     links_visited: Box<HashSet<CaseInsensitiveString>>,
     /// Robot.txt parser holder.
-    robot_file_parser: Option<RobotFileParser>,
+    robot_file_parser: Option<Box<RobotFileParser>>,
     /// current sitemap url
     sitemap_url: String,
 }
@@ -131,27 +131,15 @@ impl Website {
     /// configure the robots parser on initial crawl attempt and run
     pub async fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt {
-            let mut robot_file_parser: RobotFileParser = match &self.robot_file_parser {
-                Some(parser) => parser.to_owned(),
-                _ => {
-                    let mut robot_file_parser = RobotFileParser::new();
+            let robot_file_parser = self.robot_file_parser.get_or_insert_with(|| RobotFileParser::new());
 
-                    robot_file_parser.user_agent = self.configuration.user_agent.to_owned();
-
-                    robot_file_parser
-                }
-            };
-
-            // get the latest robots todo determine time elaspe
             if robot_file_parser.mtime() <= 4000 {
-                robot_file_parser.read(&client, &self.domain).await;
+                robot_file_parser.read(&client, &self.domain, &self.configuration.user_agent).await;
                 self.configuration.delay = robot_file_parser
-                    .get_crawl_delay(&robot_file_parser.user_agent) // returns the crawl delay in seconds
+                    .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
                     .unwrap_or_else(|| self.get_delay())
                     .as_millis() as u64;
             }
-
-            self.robot_file_parser = Some(robot_file_parser);
         }
     }
 
