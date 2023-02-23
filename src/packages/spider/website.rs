@@ -85,7 +85,7 @@ pub struct Website {
     /// contains all non-visited URL.
     links: HashSet<CaseInsensitiveString>,
     /// contains all visited URL.
-    links_visited: HashSet<CaseInsensitiveString>,
+    links_visited: Box<HashSet<CaseInsensitiveString>>,
     /// Robot.txt parser holder.
     robot_file_parser: Option<RobotFileParser>,
     /// current sitemap url
@@ -102,7 +102,7 @@ impl Website {
 
         Self {
             configuration: Configuration::new(),
-            links_visited: HashSet::new(),
+            links_visited: HashSet::new().into(),
             links: HashSet::from([domain_base.clone().into()]), // todo: remove dup mem usage for domain tracking
             domain: domain_base,
             robot_file_parser: None,
