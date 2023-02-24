@@ -131,10 +131,14 @@ impl Website {
     /// configure the robots parser on initial crawl attempt and run
     pub async fn configure_robots_parser(&mut self, client: &Client) {
         if self.configuration.respect_robots_txt {
-            let robot_file_parser = self.robot_file_parser.get_or_insert_with(|| RobotFileParser::new());
+            let robot_file_parser = self
+                .robot_file_parser
+                .get_or_insert_with(|| RobotFileParser::new());
 
             if robot_file_parser.mtime() <= 4000 {
-                robot_file_parser.read(&client, &self.domain, &self.configuration.user_agent).await;
+                robot_file_parser
+                    .read(&client, &self.domain, &self.configuration.user_agent)
+                    .await;
                 self.configuration.delay = robot_file_parser
                     .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
                     .unwrap_or_else(|| self.get_delay())

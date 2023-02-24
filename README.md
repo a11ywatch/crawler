@@ -2,7 +2,9 @@
 
 [![A11yWatch](https://circleci.com/gh/a11ywatch/crawler.svg?style=svg)](https://circleci.com/gh/a11ywatch/crawler)
 
-A [gRPC](https://grpc.io/) web indexer turbo charged for performance.
+A [gRPC](https://grpc.io/) web indexer turbo charged for performance. 
+
+This project is capable of handling millions of pages per second efficiently.
 
 ## Getting Started
 
@@ -98,6 +100,22 @@ website.configuration.delay = 0; // Defaults to 250 ms
 website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version
 website.crawl().await;
 ```
+
+A basic [example](./examples/example.rs) can also be done with:
+
+One terminal run the server
+
+```sh
+cargo run --example server --release
+```
+
+Another terminal run the client/server
+
+```sh
+cargo run --example client --release
+```
+
+https://user-images.githubusercontent.com/8095978/221221122-cfed83aa-6ca1-4122-a1db-0d9948e9f9d9.mov
 
 ### Dependencies
 

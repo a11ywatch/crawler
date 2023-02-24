@@ -29,7 +29,7 @@ pub struct Configuration {
     /// extend crawl with sitemap.xml
     pub sitemap: bool,
     /// Request max timeout per page
-    pub request_timeout: Duration
+    pub request_timeout: Duration,
 }
 
 impl Configuration {

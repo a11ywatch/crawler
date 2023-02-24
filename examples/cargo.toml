@@ -1,0 +1,31 @@
+[package]
+name = "website_crawler_example"
+version = "0.7.54"
+authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
+edition = "2018"
+description = "gRPC tokio based web crawler"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/a11ywatch/crawler"
+keywords = ["crawler", "web-crawler", "spider", "web-indexer", "site-map-generator"]
+categories = ["accessibility", "asynchronous"]
+[badges]
+maintenance = { status = "as-is" }
+
+[dev-dependencies]
+convert_case = "0.5.0"
+env_logger = "0.9.0"
+htr = "0.5.23"
+
+[dependencies.crawler]
+version = "1.19.23"
+path = "../"
+default-features = false
+
+[[example]]
+name = "example-server"
+path = "server.rs"
+
+[[example]]
+name = "example-client"
+path = "client.rs"
