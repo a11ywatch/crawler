@@ -22,9 +22,11 @@ jobs:
 
       - name: Build and Push Latest (Alpine)
         run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
-
-      - name: Build and Push (Debian)
-        run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
+        continue-on-error: true
 
       - name: Build and Push (Ubuntu)
         run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
+        continue-on-error: true
+
+      - name: Build and Push (Debian)
+        run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
