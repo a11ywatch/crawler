@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 /// Structure to configure `Website` crawler
 /// ```rust
 /// use website_crawler::spider::website::Website;
@@ -26,6 +28,8 @@ pub struct Configuration {
     pub proxy: String,
     /// extend crawl with sitemap.xml
     pub sitemap: bool,
+    /// Request max timeout per page
+    pub request_timeout: Duration
 }
 
 impl Configuration {
@@ -33,6 +37,7 @@ impl Configuration {
     pub fn new() -> Self {
         Self {
             delay: 250,
+            request_timeout: Duration::from_millis(15000),
             ..Default::default()
         }
     }

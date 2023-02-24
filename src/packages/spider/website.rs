@@ -79,7 +79,7 @@ impl AsRef<str> for CaseInsensitiveString {
 #[derive(Debug)]
 pub struct Website {
     /// configuration properties for website.
-    pub configuration: Configuration,
+    pub configuration: Box<Configuration>,
     /// the domain name of the website
     domain: String,
     /// contains all non-visited URL.
@@ -101,7 +101,7 @@ impl Website {
         let domain_base = string_concat!(&domain, "/");
 
         Self {
-            configuration: Configuration::new(),
+            configuration: Box::new(Configuration::new()),
             links_visited: HashSet::new().into(),
             links: HashSet::from([domain_base.clone().into()]), // todo: remove dup mem usage for domain tracking
             domain: domain_base,
@@ -166,6 +166,9 @@ impl Website {
         let mut client = Client::builder()
             .default_headers(HEADERS.clone())
             .redirect(policy)
+            .tcp_keepalive(Duration::from_millis(500))
+            .pool_idle_timeout(None)
+            .timeout(self.configuration.request_timeout)
             .user_agent(&self.configuration.user_agent)
             .brotli(true);
 
