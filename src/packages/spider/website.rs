@@ -9,7 +9,7 @@ use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
-use scraper::Selector;
+use fast_scraper::Selector;
 use sitemap::{
     reader::{SiteMapEntity, SiteMapReader},
     structs::Location,

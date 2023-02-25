@@ -8,7 +8,7 @@ extern crate ua_generator;
 extern crate hashbrown;
 extern crate log;
 extern crate reqwest;
-extern crate scraper;
+extern crate fast_scraper;
 extern crate url;
 #[macro_use]
 extern crate lazy_static;
