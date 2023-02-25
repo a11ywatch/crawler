@@ -225,6 +225,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
+name = "castaway"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a17ed5635fc8536268e5d4de1e22e81ac34419e5f052d4d51f4e01dcc263fcc"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -268,6 +277,19 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
+]
+
+[[package]]
+name = "compact_str"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bff0805f79ecb1b35163f3957a6934ea8d04fcd36ef98b52e7316f63e72e73d1"
+dependencies = [
+ "castaway",
+ "cfg-if",
+ "itoa 1.0.5",
+ "ryu",
+ "static_assertions",
 ]
 
 [[package]]
@@ -1312,9 +1334,9 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3933d3ac2717077b3d5f42b40f59edfb1fb6a8c14e1c7de0f38075c4bac8e314"
+checksum = "e48e50df39172a3e7eb17e14642445da64996989bc212b583015435d39a58537"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -1322,9 +1344,9 @@ dependencies = [
 
 [[package]]
 name = "prost-build"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a24be1d23b4552a012093e1b93697b73d644ae9590e3253d878d0e77d411b614"
+checksum = "2c828f93f5ca4826f97fedcbd3f9a536c16b12cff3dbbb4a007f932bbad95b12"
 dependencies = [
  "bytes",
  "heck",
@@ -1344,9 +1366,9 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e9935362e8369bc3acd874caeeae814295c504c2bdbcde5c024089cf8b4dc12"
+checksum = "4ea9b0f8cbe5e15a8a042d030bd96668db28ecb567ec37d691971ff5731d2b1b"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1357,9 +1379,9 @@ dependencies = [
 
 [[package]]
 name = "prost-types"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7de56acd5cc9642cac2a9518d4c8c53818905398fe42d33235859e0d542a7695"
+checksum = "379119666929a1afd7a043aa6cf96fa67a6dce9af60c88095a4686dbce4c9c88"
 dependencies = [
  "prost",
 ]
@@ -1780,6 +1802,12 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "string_cache"
@@ -2384,9 +2412,10 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.7.55"
+version = "0.7.56"
 dependencies = [
  "cc",
+ "compact_str",
  "env_logger",
  "failure_derive",
  "fs_extra",

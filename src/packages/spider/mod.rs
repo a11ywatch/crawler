@@ -35,11 +35,31 @@ pub mod utils;
 /// A website to crawl.
 pub mod website;
 
+#[cfg(feature = "regex")]
+/// Black list checking url exist with Regex.
+pub mod black_list {
+    use compact_str::CompactString;
+    use regex::Regex;
+    /// check if link exist in blacklists with regex.
+    pub fn contains(blacklist_url: &Vec<CompactString>, link: &CompactString) -> bool {
+        for pattern in blacklist_url {
+            let re = Regex::new(pattern).unwrap();
+            if re.is_match(link) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+#[cfg(not(feature = "regex"))]
 /// Black list checking url exist.
 pub mod black_list {
+    use compact_str::CompactString;
+
     /// check if link exist in blacklists.
-    #[inline]
-    pub fn contains(blacklist_url: &Vec<String>, link: &String) -> bool {
+    pub fn contains(blacklist_url: &Vec<CompactString>, link: &CompactString) -> bool {
         blacklist_url.contains(&link)
     }
 }

@@ -4,6 +4,7 @@ use super::page::{build, get_page_selectors, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
+use compact_str::CompactString;
 use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -26,7 +27,7 @@ use url::Url;
 
 /// case-insensitive string handling
 #[derive(Debug, Clone)]
-pub struct CaseInsensitiveString(String);
+pub struct CaseInsensitiveString(CompactString);
 
 impl PartialEq for CaseInsensitiveString {
     #[inline]
@@ -55,7 +56,7 @@ impl From<&str> for CaseInsensitiveString {
 
 impl From<String> for CaseInsensitiveString {
     fn from(s: String) -> Self {
-        CaseInsensitiveString { 0: s }
+        CaseInsensitiveString { 0: s.into() }
     }
 }
 
@@ -81,7 +82,7 @@ pub struct Website {
     /// configuration properties for website.
     pub configuration: Box<Configuration>,
     /// the domain name of the website
-    domain: String,
+    domain: Box<String>,
     /// contains all non-visited URL.
     links: HashSet<CaseInsensitiveString>,
     /// contains all visited URL.
@@ -89,7 +90,7 @@ pub struct Website {
     /// Robot.txt parser holder.
     robot_file_parser: Option<Box<RobotFileParser>>,
     /// current sitemap url
-    sitemap_url: String,
+    sitemap_url: Option<Box<CompactString>>,
 }
 
 /// hashset string_concat
@@ -104,9 +105,9 @@ impl Website {
             configuration: Box::new(Configuration::new()),
             links_visited: HashSet::new().into(),
             links: HashSet::from([domain_base.clone().into()]), // todo: remove dup mem usage for domain tracking
-            domain: domain_base,
+            domain: domain_base.into(),
             robot_file_parser: None,
-            sitemap_url: String::from(""),
+            sitemap_url: Default::default(),
         }
     }
 
@@ -136,9 +137,7 @@ impl Website {
                 .get_or_insert_with(|| RobotFileParser::new());
 
             if robot_file_parser.mtime() <= 4000 {
-                robot_file_parser
-                    .read(&client, &self.domain, &self.configuration.user_agent)
-                    .await;
+                robot_file_parser.read(&client, &self.domain).await;
                 self.configuration.delay = robot_file_parser
                     .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
                     .unwrap_or_else(|| self.get_delay())
@@ -329,7 +328,7 @@ impl Website {
         client: &Client,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
         semaphore: &Arc<Semaphore>,
-        selector: &Arc<(Selector, String)>,
+        selector: &Arc<(Selector, CompactString)>,
         throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
@@ -371,7 +370,7 @@ impl Website {
 
             self.links.clone_from(&(&new_links - &self.links_visited));
             new_links.clear();
-            if new_links.capacity() > 100 {
+            if new_links.capacity() > 150 {
                 new_links.shrink_to_fit()
             }
             task::yield_now().await;
@@ -388,13 +387,19 @@ impl Website {
         user_id: u32,
         txx: &UnboundedSender<bool>,
     ) {
-        self.sitemap_url = string_concat!(self.domain, "sitemap.xml");
+        self.sitemap_url = Some(Box::new(
+            string_concat!(self.domain.as_str(), "sitemap.xml").into(),
+        ));
 
-        while !handle.is_finished() && !self.sitemap_url.is_empty() {
+        while !handle.is_finished() && !self.sitemap_url.is_none() {
             let mut sitemap_added = false;
             let txx = txx.clone();
 
-            match client.get(&self.sitemap_url).send().await {
+            match client
+                .get(self.sitemap_url.as_ref().unwrap().as_str())
+                .send()
+                .await
+            {
                 Ok(response) => {
                     match response.text().await {
                         Ok(text) => {
@@ -427,7 +432,9 @@ impl Website {
                                         match sitemap_entry.loc {
                                             Location::None => {}
                                             Location::Url(url) => {
-                                                self.sitemap_url = url.as_str().into();
+                                                self.sitemap_url
+                                                    .replace(Box::new(url.as_str().into()));
+
                                                 sitemap_added = true;
                                             }
                                             Location::ParseErr(err) => {
@@ -448,7 +455,7 @@ impl Website {
             };
 
             if !sitemap_added {
-                self.sitemap_url.clear();
+                self.sitemap_url = None;
             };
         }
     }
@@ -460,8 +467,8 @@ impl Website {
         client: &Client,
         txx: &UnboundedSender<bool>,
         tx: &UnboundedSender<Message>,
-        selector: &Arc<(Selector, String)>,
-        link: &String,
+        selector: &Arc<(Selector, CompactString)>,
+        link: &CompactString,
         user_id: u32,
         permit: OwnedSemaphorePermit,
     ) {
@@ -470,7 +477,7 @@ impl Website {
         let tx = tx.clone();
         task::yield_now().await;
         let client = client.clone();
-        let link = link.to_owned();
+        let link = link.to_string();
         let selector = selector.clone();
 
         task::yield_now().await;
@@ -501,7 +508,7 @@ impl Website {
         rpcx: &WebsiteServiceClient<Channel>,
         client: &Client,
         txx: &UnboundedSender<bool>,
-        link: &String,
+        link: &CompactString,
         user_id: u32,
         semaphore: &Arc<Semaphore>,
     ) {
@@ -509,7 +516,7 @@ impl Website {
         let txx = txx.clone();
         task::yield_now().await;
         let client = client.clone();
-        let link = link.clone();
+        let link = link.to_string();
         let permit = semaphore.clone().acquire_owned().await.unwrap();
         task::yield_now().await;
 
@@ -533,14 +540,26 @@ impl Website {
     /// - is not blacklisted
     /// - is not forbidden in robot.txt file (if parameter is defined)
     pub fn is_allowed(&self, link: &CaseInsensitiveString) -> bool {
-        if self.links_visited.contains(link)
-            || contains(&self.configuration.blacklist_url, &link.0)
-            || self.configuration.respect_robots_txt && !self.is_allowed_robots(&link.0)
-        {
-            return false;
+        if self.links_visited.contains(link) {
+            false
+        } else {
+            self.is_allowed_default(&link.0)
         }
+    }
 
-        true
+    /// return `true` if URL:
+    ///
+    /// - is not blacklisted
+    /// - is not forbidden in robot.txt file (if parameter is defined)
+    pub fn is_allowed_default(&self, link: &CompactString) -> bool {
+        if !self.configuration.blacklist_url.is_none() {
+            match &self.configuration.blacklist_url {
+                Some(v) => !contains(v, &link),
+                _ => true,
+            }
+        } else {
+            self.is_allowed_robots(&link)
+        }
     }
 
     /// return `true` if URL:
@@ -550,7 +569,7 @@ impl Website {
         if self.configuration.respect_robots_txt {
             let robot_file_parser = self.robot_file_parser.as_ref().unwrap(); // unwrap will always return
 
-            robot_file_parser.can_fetch("*", link)
+            robot_file_parser.can_fetch("*", &link)
         } else {
             true
         }

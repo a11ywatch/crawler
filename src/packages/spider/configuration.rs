@@ -1,3 +1,4 @@
+use compact_str::CompactString;
 use std::time::Duration;
 
 /// Structure to configure `Website` crawler
@@ -19,7 +20,7 @@ pub struct Configuration {
     /// Allow all tlds for domain.
     pub tld: bool,
     /// List of pages to not crawl. [optional: regex pattern matching]
-    pub blacklist_url: Vec<String>,
+    pub blacklist_url: Option<Vec<CompactString>>,
     /// User-Agent
     pub user_agent: String,
     /// Polite crawling delay in milli seconds.

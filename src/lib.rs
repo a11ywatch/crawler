@@ -12,6 +12,7 @@ extern crate scraper;
 extern crate url;
 #[macro_use]
 extern crate lazy_static;
+pub extern crate compact_str;
 pub use packages::spider;
 
 #[macro_use]
