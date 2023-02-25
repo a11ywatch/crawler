@@ -19,10 +19,12 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::sync::Semaphore;
 use tokio::task;
+use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
+use ua_generator::ua::spoof_ua;
 use url::Url;
 
 /// case-insensitive string handling
@@ -82,7 +84,7 @@ pub struct Website {
     /// configuration properties for website.
     pub configuration: Box<Configuration>,
     /// the domain name of the website
-    domain: Box<String>,
+    domain: Box<CompactString>,
     /// contains all non-visited URL.
     links: HashSet<CaseInsensitiveString>,
     /// contains all visited URL.
@@ -105,7 +107,7 @@ impl Website {
             configuration: Box::new(Configuration::new()),
             links_visited: HashSet::new().into(),
             links: HashSet::from([domain_base.clone().into()]), // todo: remove dup mem usage for domain tracking
-            domain: domain_base.into(),
+            domain: Box::new(CompactString::new(domain_base)),
             robot_file_parser: None,
             sitemap_url: Default::default(),
         }
@@ -171,31 +173,41 @@ impl Website {
             .redirect(policy)
             .tcp_keepalive(Duration::from_millis(500))
             .pool_idle_timeout(None)
-            .timeout(self.configuration.request_timeout)
-            .user_agent(&self.configuration.user_agent)
+            .user_agent(match &self.configuration.user_agent {
+                Some(ua) => ua.as_str(),
+                _ => spoof_ua(),
+            })
             .brotli(true);
 
-        if !self.configuration.proxy.is_empty() {
-            match reqwest::Proxy::all(&self.configuration.proxy) {
-                Ok(proxy) => match Url::parse(&self.configuration.proxy) {
-                    Ok(url) => {
-                        let password = match &url.password() {
-                            Some(pass) => pass,
-                            _ => "",
-                        };
-                        client = client.proxy(proxy.basic_auth(&url.username(), &password));
-                    }
+        match &self.configuration.proxy {
+            Some(proxy_url) => {
+                match reqwest::Proxy::all(proxy_url.as_str()) {
+                    Ok(proxy) => match Url::parse(&*proxy_url.as_str()) {
+                        Ok(url) => {
+                            let password = match &url.password() {
+                                Some(pass) => pass,
+                                _ => "",
+                            };
+                            client = client.proxy(proxy.basic_auth(&url.username(), &password));
+                        }
+                        _ => {
+                            client = client.proxy(proxy);
+                        }
+                    },
                     _ => {
-                        client = client.proxy(proxy);
+                        log("proxy connect error", "");
                     }
-                },
-                _ => {
-                    log("proxy connect error", "");
-                }
-            };
+                };
+            }
+            _ => {}
         }
 
-        client.build().unwrap_or_default()
+        match &self.configuration.request_timeout {
+            Some(t) => client.timeout(**t),
+            _ => client,
+        }
+        .build()
+        .unwrap_or_default()
     }
 
     /// setup config for crawl
@@ -310,6 +322,8 @@ impl Website {
             crawl_valid
         });
 
+        task::yield_now().await;
+
         if self.configuration.sitemap {
             self.sitemap_crawl(&handle, client, &rpcx, &semaphore, user_id, &txx)
                 .await;
@@ -333,12 +347,37 @@ impl Website {
         user_id: u32,
         txx: &UnboundedSender<bool>,
     ) {
-        let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
+        let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
+        let mut links: HashSet<CaseInsensitiveString> =
+            if self.is_allowed_default(&CompactString::new(&self.domain.as_str())) {
+                let page = Page::new(&self.domain, &client).await;
+                self.links_visited.insert(page.get_url().to_owned().into());
 
-        while !self.links.is_empty() && !handle.is_finished() {
-            let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
-                unbounded_channel();
-            let stream = tokio_stream::iter(&self.links).throttle(*throttle);
+                self.rpc_callback(
+                    &rpcx,
+                    &client,
+                    &txx,
+                    &mut set,
+                    &selector,
+                    &self.domain,
+                    user_id,
+                    &semaphore,
+                )
+                .await;
+
+                let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
+
+                cu.extend(page.links(&selector));
+
+                cu
+            } else {
+                self.links.drain().collect()
+            };
+
+        loop {
+            let stream =
+                tokio_stream::iter::<HashSet<CaseInsensitiveString>>(links.drain().collect())
+                    .throttle(*throttle);
             tokio::pin!(stream);
 
             // clone the unbounded sender
@@ -352,28 +391,28 @@ impl Website {
                     continue;
                 }
                 self.links_visited.insert(link.clone());
-                let permit = semaphore.clone().acquire_owned().await.unwrap();
+                let permit = semaphore.clone();
                 log("fetch", &link);
                 self.rpc_callback(
-                    &rpcx, &client, &txx, &tx, &selector, &link.0, user_id, permit,
+                    &rpcx, &client, &txx, &mut set, &selector, &link.0, user_id, &permit,
                 )
                 .await;
             }
-
-            drop(tx);
             drop(txx);
 
-            while let Some(msg) = rx.recv().await {
-                new_links.extend(msg);
+            if links.capacity() >= 1500 {
+                links.shrink_to_fit();
+            }
+
+            while let Some(res) = set.join_next().await {
+                let msg = res.unwrap();
+                links.extend(&msg - &self.links_visited);
                 task::yield_now().await;
             }
 
-            self.links.clone_from(&(&new_links - &self.links_visited));
-            new_links.clear();
-            if new_links.capacity() > 150 {
-                new_links.shrink_to_fit()
+            if links.is_empty() || handle.is_finished() {
+                break;
             }
-            task::yield_now().await;
         }
     }
 
@@ -466,40 +505,38 @@ impl Website {
         rpcx: &WebsiteServiceClient<Channel>,
         client: &Client,
         txx: &UnboundedSender<bool>,
-        tx: &UnboundedSender<Message>,
+        set: &mut JoinSet<HashSet<CaseInsensitiveString>>,
         selector: &Arc<(Selector, CompactString)>,
         link: &CompactString,
         user_id: u32,
-        permit: OwnedSemaphorePermit,
+        semaphore: &Arc<Semaphore>,
     ) {
         let mut rpcx = rpcx.clone();
         let txx = txx.clone();
-        let tx = tx.clone();
         task::yield_now().await;
         let client = client.clone();
         let link = link.to_string();
         let selector = selector.clone();
+        let permit = semaphore.clone();
 
         task::yield_now().await;
 
-        task::spawn(async move {
-            {
-                let page = Page::new(&link, &client).await;
-                let links = page.links(&*selector);
-                let x = monitor(&mut rpcx, link, user_id, page.html).await;
+        set.spawn(async move {
+            let permit = permit.acquire().await.unwrap();
+            let page = Page::new(&link, &client).await;
+            let links = page.links(&selector);
 
-                drop(permit);
+            let x = monitor(&mut rpcx, link, user_id, page.html).await;
+            drop(permit);
 
-                if let Err(_) = txx.send(x) {
-                    log("receiver dropped", "");
-                };
+            if let Err(_) = txx.send(x) {
+                log("receiver dropped", "");
+            };
 
-                if let Err(_) = tx.send(links) {
-                    log("receiver dropped", "");
-                }
-            }
-            task::yield_now().await;
+            links
         });
+
+        task::yield_now().await;
     }
 
     /// perform the rpc callback raw without links
@@ -580,7 +617,7 @@ impl Website {
 async fn test_respect_robots_txt() {
     let mut website: Website = Website::new("https://stackoverflow.com");
     website.configuration.respect_robots_txt = true;
-    website.configuration.user_agent = "*".into();
+    website.configuration.user_agent = Some(Box::new("*".into()));
 
     let client = website.setup().await;
     website.configure_robots_parser(&client).await;
@@ -592,19 +629,11 @@ async fn test_respect_robots_txt() {
     // test match for bing bot
     let mut website_second: Website = Website::new("https://www.mongodb.com");
     website_second.configuration.respect_robots_txt = true;
-    website_second.configuration.user_agent = "bingbot".into();
+    website_second.configuration.user_agent = Some(Box::new("bingbot".into()));
 
     let client_second = website_second.setup().await;
     website_second.configure_robots_parser(&client_second).await;
 
-    assert_eq!(
-        website_second.configuration.user_agent,
-        website_second
-            .robot_file_parser
-            .as_ref()
-            .unwrap()
-            .user_agent
-    );
     assert_eq!(website_second.configuration.delay, 60000); // should equal one minute in ms
 
     // test crawl delay with wildcard agent [DOES not work when using set agent]

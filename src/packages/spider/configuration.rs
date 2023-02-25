@@ -22,15 +22,15 @@ pub struct Configuration {
     /// List of pages to not crawl. [optional: regex pattern matching]
     pub blacklist_url: Option<Vec<CompactString>>,
     /// User-Agent
-    pub user_agent: String,
+    pub user_agent: Option<Box<CompactString>>,
     /// Polite crawling delay in milli seconds.
     pub delay: u64,
     /// proxy to use for request [todo: make breaking API change for handling].
-    pub proxy: String,
+    pub proxy: Option<Box<CompactString>>,
     /// extend crawl with sitemap.xml
     pub sitemap: bool,
     /// Request max timeout per page
-    pub request_timeout: Duration,
+    pub request_timeout: Option<Box<Duration>>,
 }
 
 impl Configuration {
@@ -38,7 +38,7 @@ impl Configuration {
     pub fn new() -> Self {
         Self {
             delay: 250,
-            request_timeout: Duration::from_millis(15000),
+            request_timeout: Some(Box::new(Duration::from_millis(15000))),
             ..Default::default()
         }
     }

@@ -2412,7 +2412,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.7.56"
+version = "0.7.59"
 dependencies = [
  "cc",
  "compact_str",

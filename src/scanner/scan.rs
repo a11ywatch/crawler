@@ -4,7 +4,6 @@ use crate::rpc::client::monitor_page_start;
 
 use crate::packages::spider::website::Website;
 use crate::rpc::client::website::ScanInitParams;
-use ua_generator::ua::spoof_ua;
 
 /// crawl all pages and stream request as links are found.
 pub async fn scan(
@@ -25,14 +24,15 @@ pub async fn scan(
     website.configuration.delay = delay;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.proxy = proxy;
     website.configuration.sitemap = sitemap;
-    website.configuration.user_agent = if !agent.is_empty() {
-        &agent
-    } else {
-        spoof_ua()
-    }
-    .into();
+
+    if !proxy.is_empty() {
+        website.configuration.proxy = Some(Box::new(proxy.into()));
+    };
+
+    if !agent.is_empty() {
+        website.configuration.user_agent = Some(Box::new(agent.into()));
+    };
 
     let rq_start = ScanInitParams { domain, user_id };
     let rc_end = rq_start.clone();

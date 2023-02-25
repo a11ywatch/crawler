@@ -25,6 +25,7 @@
 //! }
 //! ```
 
+use compact_str::CompactString;
 use reqwest::Client;
 use reqwest::Response;
 use reqwest::StatusCode;
@@ -103,19 +104,26 @@ impl Entry {
 
     /// check if this entry applies to the specified agent
     fn applies_to(&self, useragent: &str) -> bool {
-        let ua = useragent
-            .split('/')
-            .nth(0)
-            .unwrap_or_default()
-            .to_lowercase();
-        for agent in &self.useragents {
-            if agent == "*" {
-                return true;
+        if useragent.is_empty() {
+            for agent in &self.useragents {
+                if agent == "*" {
+                    return true;
+                }
             }
-            if ua.contains(agent) {
-                return true;
+        } else {
+            let ua = useragent
+                .split('/')
+                .nth(0)
+                .unwrap_or_default()
+                .to_lowercase();
+
+            for agent in &self.useragents {
+                if agent == "*" || ua.contains(agent) {
+                    return true;
+                }
             }
-        }
+        };
+
         false
     }
 
@@ -408,26 +416,35 @@ impl RobotFileParser {
     }
 
     /// Returns the crawl delay for this user agent as a `Duration`, or None if no crawl delay is defined.
-    pub fn get_crawl_delay<T: AsRef<str>>(&self, useragent: T) -> Option<Duration> {
-        let useragent = useragent.as_ref();
-
+    pub fn get_crawl_delay(&self, useragent: &Option<Box<CompactString>>) -> Option<Duration> {
         if self.last_checked == 0 {
-            return None;
-        }
+            None
+        } else {
+            let useragent = useragent.as_ref();
+            let duration: Option<Duration> = match useragent {
+                Some(ua) => {
+                    for entry in &self.entries {
+                        if entry.applies_to(ua) {
+                            return entry.get_crawl_delay();
+                        }
+                    }
+                    None
+                }
+                _ => None,
+            };
 
-        for entry in &self.entries {
-            if entry.applies_to(useragent) {
-                return entry.get_crawl_delay();
+            if duration.is_some() {
+                duration
+            } else {
+                let default_entry = &self.default_entry;
+
+                if !default_entry.is_empty() {
+                    return default_entry.get_crawl_delay();
+                }
+
+                None
             }
         }
-
-        let default_entry = &self.default_entry;
-
-        if !default_entry.is_empty() {
-            return default_entry.get_crawl_delay();
-        }
-
-        None
     }
 
     /// Returns the request rate for this user agent as a `RequestRate`, or None if not request rate is defined
