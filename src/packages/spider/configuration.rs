@@ -5,11 +5,10 @@ use std::time::Duration;
 /// ```rust
 /// use website_crawler::spider::website::Website;
 /// let mut website: Website = Website::new("https://choosealicense.com");
-/// website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".to_string());
+/// website.configuration.blacklist_url.insert(Box::new(Vec::from(["https://choosealicense.com/licenses/".into()])));
 /// website.configuration.respect_robots_txt = true;
 /// website.configuration.subdomains = true;
 /// website.configuration.tld = true;
-/// website.crawl();
 /// ```
 #[derive(Debug, Default)]
 pub struct Configuration {
@@ -20,11 +19,11 @@ pub struct Configuration {
     /// Allow all tlds for domain.
     pub tld: bool,
     /// List of pages to not crawl. [optional: regex pattern matching]
-    pub blacklist_url: Option<Vec<CompactString>>,
+    pub blacklist_url: Option<Box<Vec<CompactString>>>,
     /// User-Agent
     pub user_agent: Option<Box<CompactString>>,
     /// Polite crawling delay in milli seconds.
-    pub delay: u64,
+    pub delay: Box<u64>,
     /// proxy to use for request [todo: make breaking API change for handling].
     pub proxy: Option<Box<CompactString>>,
     /// extend crawl with sitemap.xml
@@ -37,7 +36,7 @@ impl Configuration {
     /// Represents crawl configuration for a website.
     pub fn new() -> Self {
         Self {
-            delay: 250,
+            delay: Box::new(0),
             request_timeout: Some(Box::new(Duration::from_millis(15000))),
             ..Default::default()
         }

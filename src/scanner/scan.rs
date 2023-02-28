@@ -21,11 +21,11 @@ pub async fn scan(
     let mut website: Website = Website::new(&domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
-    website.configuration.delay = delay;
+    website.configuration.delay = Box::new(delay);
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
     website.configuration.sitemap = sitemap;
-
+    
     if !proxy.is_empty() {
         website.configuration.proxy = Some(Box::new(proxy.into()));
     };

@@ -492,23 +492,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fast_scraper"
-version = "0.14.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45d4734f93f7c4ac6616b1ac3548206c81eb7d155b3bb096b2ef4f5dc3fae225"
-dependencies = [
- "ahash",
- "cssparser",
- "ego-tree",
- "getopts",
- "html5ever",
- "matches",
- "selectors",
- "smallvec",
- "tendril",
-]
-
-[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -625,15 +608,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "getopts"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14dbbfd5c71d70241ecf9e6f13737f7b5ce823821063188d7e46c41d371eebd5"
-dependencies = [
- "unicode-width",
 ]
 
 [[package]]
@@ -2442,19 +2416,23 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.7.62"
+version = "0.7.70"
 dependencies = [
+ "ahash",
  "cc",
  "compact_str",
+ "cssparser",
+ "ego-tree",
  "env_logger",
  "failure_derive",
- "fast_scraper",
  "fs_extra",
  "hashbrown 0.13.2",
+ "html5ever",
  "jemalloc-sys",
  "jemallocator",
  "lazy_static",
  "log",
+ "matches",
  "os_info",
  "percent-encoding",
  "prost",
@@ -2463,8 +2441,11 @@ dependencies = [
  "regex",
  "reqwest",
  "rustc_version",
+ "selectors",
  "sitemap",
+ "smallvec",
  "string_concat",
+ "tendril",
  "tokio",
  "tokio-stream",
  "tonic",

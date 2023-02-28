@@ -9,7 +9,7 @@ use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
-use fast_scraper::Selector;
+use crate::packages::scraper::Selector;
 use sitemap::{
     reader::{SiteMapEntity, SiteMapReader},
     structs::Location,
@@ -72,11 +72,15 @@ impl AsRef<str> for CaseInsensitiveString {
 /// Represents a website to crawl and gather all links.
 /// ```rust
 /// use website_crawler::spider::website::Website;
-/// let mut localhost = Website::new("http://example.com");
-/// localhost.crawl();
-/// // `Website` will be filled with `Pages` when crawled. To get them, just use
-/// for page in localhost.get_pages() {
-///     // do something
+/// use website_crawler::rpc::client::create_client;
+/// async fn crawl() {
+///     let mut client = create_client().await.unwrap();
+///     let mut localhost = Website::new("http://example.com");
+///     localhost.crawl_grpc(&mut client, Default::default()).await;
+///     // `Website` will be filled with `Pages` when crawled. To get them, just use
+///     for page in localhost.get_pages() {
+///         // do something
+///     }
 /// }
 /// ```
 #[derive(Debug)]
@@ -128,7 +132,7 @@ impl Website {
 
     /// crawl delay getter
     fn get_delay(&self) -> Duration {
-        Duration::from_millis(self.configuration.delay)
+        Duration::from_millis(*self.configuration.delay)
     }
 
     /// configure the robots parser on initial crawl attempt and run
@@ -140,10 +144,10 @@ impl Website {
 
             if robot_file_parser.mtime() <= 4000 {
                 robot_file_parser.read(&client, &self.domain).await;
-                self.configuration.delay = robot_file_parser
+                self.configuration.delay = Box::new(robot_file_parser
                     .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
                     .unwrap_or_else(|| self.get_delay())
-                    .as_millis() as u64;
+                    .as_millis() as u64);
             }
         }
     }
@@ -622,7 +626,7 @@ async fn test_respect_robots_txt() {
     let client = website.setup().await;
     website.configure_robots_parser(&client).await;
 
-    assert_eq!(website.configuration.delay, 250);
+    assert_eq!(website.configuration.delay, Box::new(0));
 
     assert!(!website.is_allowed(&"https://stackoverflow.com/posts/".into()));
 
@@ -634,7 +638,7 @@ async fn test_respect_robots_txt() {
     let client_second = website_second.setup().await;
     website_second.configure_robots_parser(&client_second).await;
 
-    assert_eq!(website_second.configuration.delay, 60000); // should equal one minute in ms
+    assert_eq!(website_second.configuration.delay, Box::new(60000)); // should equal one minute in ms
 
     // test crawl delay with wildcard agent [DOES not work when using set agent]
     let mut website_third: Website = Website::new("https://www.mongodb.com");
@@ -643,5 +647,5 @@ async fn test_respect_robots_txt() {
 
     website_third.configure_robots_parser(&client_third).await;
 
-    assert_eq!(website_third.configuration.delay, 10000); // should equal 10 seconds in ms
+    assert_eq!(website_third.configuration.delay, Box::new(10000)); // should equal 10 seconds in ms
 }
