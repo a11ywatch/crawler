@@ -160,10 +160,10 @@ This is required since every request spawns a thread. Isolating the context dras
 
 If you need help implementing the gRPC server to receive the pages or links when found check out the [gRPC node example](https://github.com/A11yWatch/a11ywatch-core/blob/main/src/proto/website-server.ts) for a starting point .
 
-## TODO
+## Donations
 
-1. Allow gRPC server port setting or change to direct url:port combo.
-1. add protoc pre-compiled binary [installation](https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os).
+Building the project is a bit expensive, we take all contributions including help with cost to deploy the best docker images for everyone to utilize.
+If you want to help send an email to [a11ywatch support](support@a11ywatch.com). At A11yWatch we use a custom variation of the project and we do not need to target other platforms since we deploy on similiar architecture. Helping give back to the community requires a bit more time and effort for some of the solutions that we released to the community.
 
 ## LICENSE
 
