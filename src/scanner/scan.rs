@@ -25,7 +25,7 @@ pub async fn scan(
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
     website.configuration.sitemap = sitemap;
-    
+
     if !proxy.is_empty() {
         website.configuration.proxy = Some(Box::new(proxy.into()));
     };

@@ -3,17 +3,18 @@ use super::configuration::Configuration;
 use super::page::{build, get_page_selectors, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
+use crate::packages::scraper::Selector;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use compact_str::CompactString;
 use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
-use crate::packages::scraper::Selector;
 use sitemap::{
     reader::{SiteMapEntity, SiteMapReader},
     structs::Location,
 };
+use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::Duration;
@@ -68,6 +69,13 @@ impl AsRef<str> for CaseInsensitiveString {
         &self.0
     }
 }
+
+/// shared data
+pub type Shared = Arc<(
+    Semaphore,
+    Client,
+    (Selector, CompactString, SmallVec<[CompactString; 2]>),
+)>;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -144,10 +152,12 @@ impl Website {
 
             if robot_file_parser.mtime() <= 4000 {
                 robot_file_parser.read(&client, &self.domain).await;
-                self.configuration.delay = Box::new(robot_file_parser
-                    .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
-                    .unwrap_or_else(|| self.get_delay())
-                    .as_millis() as u64);
+                self.configuration.delay = Box::new(
+                    robot_file_parser
+                        .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
+                        .unwrap_or_else(|| self.get_delay())
+                        .as_millis() as u64,
+                );
             }
         }
     }
@@ -230,27 +240,29 @@ impl Website {
     ) {
         let client = self.setup().await;
 
-        self.crawl_concurrent_rpc(&client, rpc_client, user_id)
-            .await;
+        self.crawl_concurrent_rpc(client, rpc_client, user_id).await;
     }
 
     /// Start to crawl website with async conccurency
     pub async fn crawl(&mut self) {
         let client = self.setup().await;
 
-        self.crawl_concurrent(&client).await;
+        self.crawl_concurrent(client).await;
     }
 
     /// Start to crawl website concurrently
-    async fn crawl_concurrent(&mut self, client: &Client) {
-        let selector = Arc::new(get_page_selectors(
-            &self.domain,
-            self.configuration.subdomains,
-            self.configuration.subdomains,
-        ));
+    async fn crawl_concurrent(&mut self, client: Client) {
         let throttle = self.get_delay();
         let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
-
+        let shared: Shared = Arc::new((
+            Semaphore::new(200),
+            client,
+            get_page_selectors(
+                &self.domain,
+                self.configuration.subdomains,
+                self.configuration.tld,
+            ),
+        ));
         // crawl while links exists
         while !self.links.is_empty() {
             let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
@@ -268,13 +280,12 @@ impl Website {
                 self.links_visited.insert(l.to_owned());
 
                 let tx = tx.clone();
-                let client = client.clone();
-                let selector = selector.clone();
+                let shared = shared.clone();
 
                 task::spawn(async move {
                     {
-                        let page = Page::new(&link.0, &client).await;
-                        let links = page.links(&*selector);
+                        let page = Page::new(&link.0, &shared.1).await;
+                        let links = page.links(&shared.2, Some(true)).await;
 
                         if let Err(_) = tx.send(links) {
                             log("receiver dropped", "");
@@ -300,16 +311,19 @@ impl Website {
     /// Start to crawl website concurrently using gRPC callback
     async fn crawl_concurrent_rpc(
         &mut self,
-        client: &Client,
+        client: Client,
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
         let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
-        let semaphore = Arc::new(Semaphore::new(200));
-        let selector = Arc::new(get_page_selectors(
-            &self.domain,
-            self.configuration.subdomains,
-            self.configuration.tld,
+        let shared: Shared = Arc::new((
+            Semaphore::new(200),
+            client,
+            get_page_selectors(
+                &self.domain,
+                self.configuration.subdomains,
+                self.configuration.tld,
+            ),
         ));
         let rpcx = Arc::new(rpcx);
         let throttle = self.get_delay();
@@ -329,24 +343,20 @@ impl Website {
         task::yield_now().await;
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(&handle, client, &rpcx, &semaphore, user_id, &txx)
+            self.sitemap_crawl(&handle, &shared, &rpcx, user_id, &txx)
                 .await;
         };
 
-        self.inner_crawl(
-            &handle, client, &rpcx, &semaphore, &selector, &throttle, user_id, &txx,
-        )
-        .await;
+        self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
+            .await;
     }
 
     /// inner crawl pages until no links exist
     async fn inner_crawl(
         &mut self,
         handle: &tokio::task::JoinHandle<bool>,
-        client: &Client,
+        shared: &Shared,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
-        semaphore: &Arc<Semaphore>,
-        selector: &Arc<(Selector, CompactString)>,
         throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
@@ -354,24 +364,15 @@ impl Website {
         let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
         let mut links: HashSet<CaseInsensitiveString> =
             if self.is_allowed_default(&CompactString::new(&self.domain.as_str())) {
-                let page = Page::new(&self.domain, &client).await;
+                let page = Page::new(&self.domain, &shared.1).await;
                 self.links_visited.insert(page.get_url().to_owned().into());
 
-                self.rpc_callback(
-                    &rpcx,
-                    &client,
-                    &txx,
-                    &mut set,
-                    &selector,
-                    &self.domain,
-                    user_id,
-                    &semaphore,
-                )
-                .await;
+                self.rpc_callback(&rpcx, &shared, &txx, &mut set, &self.domain, user_id)
+                    .await;
 
                 let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
 
-                cu.extend(page.links(&selector));
+                cu.extend(page.links(&shared.2, None).await);
 
                 cu
             } else {
@@ -395,12 +396,9 @@ impl Website {
                     continue;
                 }
                 self.links_visited.insert(link.clone());
-                let permit = semaphore.clone();
                 log("fetch", &link);
-                self.rpc_callback(
-                    &rpcx, &client, &txx, &mut set, &selector, &link.0, user_id, &permit,
-                )
-                .await;
+                self.rpc_callback(&rpcx, &shared, &txx, &mut set, &link.0, user_id)
+                    .await;
             }
             drop(txx);
 
@@ -424,9 +422,8 @@ impl Website {
     pub async fn sitemap_crawl(
         &mut self,
         handle: &tokio::task::JoinHandle<bool>,
-        client: &Client,
+        shared: &Shared,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
-        semaphore: &Arc<Semaphore>,
         user_id: u32,
         txx: &UnboundedSender<bool>,
     ) {
@@ -438,7 +435,8 @@ impl Website {
             let mut sitemap_added = false;
             let txx = txx.clone();
 
-            match client
+            match shared
+                .1
                 .get(self.sitemap_url.as_ref().unwrap().as_str())
                 .send()
                 .await
@@ -461,7 +459,7 @@ impl Website {
                                             };
 
                                             self.rpc_callback_raw(
-                                                &rpcx, &client, &txx, &link.0, user_id, semaphore,
+                                                &rpcx, &shared, &txx, &link.0, user_id,
                                             )
                                             .await;
 
@@ -507,30 +505,28 @@ impl Website {
     async fn rpc_callback(
         &self,
         rpcx: &WebsiteServiceClient<Channel>,
-        client: &Client,
+        shared: &Shared,
         txx: &UnboundedSender<bool>,
         set: &mut JoinSet<HashSet<CaseInsensitiveString>>,
-        selector: &Arc<(Selector, CompactString)>,
         link: &CompactString,
         user_id: u32,
-        semaphore: &Arc<Semaphore>,
     ) {
         let mut rpcx = rpcx.clone();
         let txx = txx.clone();
-        task::yield_now().await;
-        let client = client.clone();
+        let shared = shared.clone();
         let link = link.to_string();
-        let selector = selector.clone();
-        let permit = semaphore.clone();
 
         task::yield_now().await;
 
         set.spawn(async move {
-            let permit = permit.acquire().await.unwrap();
-            let page = Page::new(&link, &client).await;
-            let links = page.links(&selector);
+            let permit = shared.0.acquire().await.unwrap();
 
-            let x = monitor(&mut rpcx, link, user_id, page.html).await;
+            let page = Page::new(&link, &shared.1).await;
+            let links = page
+                .links(&shared.2, Some(shared.0.available_permits() < 198))
+                .await;
+
+            let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
             drop(permit);
 
             if let Err(_) = txx.send(x) {
@@ -547,24 +543,23 @@ impl Website {
     async fn rpc_callback_raw(
         &self,
         rpcx: &WebsiteServiceClient<Channel>,
-        client: &Client,
+        shared: &Shared,
         txx: &UnboundedSender<bool>,
         link: &CompactString,
         user_id: u32,
-        semaphore: &Arc<Semaphore>,
     ) {
         let mut rpcx = rpcx.clone();
         let txx = txx.clone();
-        task::yield_now().await;
-        let client = client.clone();
+        let shared = shared.clone();
         let link = link.to_string();
-        let permit = semaphore.clone().acquire_owned().await.unwrap();
         task::yield_now().await;
 
         task::spawn(async move {
             {
-                let page = Page::new(&link, &client).await;
-                let x = monitor(&mut rpcx, link, user_id, page.html).await;
+                let permit = shared.0.acquire().await.unwrap();
+
+                let page = Page::new(&link, &shared.1).await;
+                let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
                 drop(permit);
 
                 if let Err(_) = txx.send(x) {
@@ -580,6 +575,7 @@ impl Website {
     /// - is not already crawled
     /// - is not blacklisted
     /// - is not forbidden in robot.txt file (if parameter is defined)
+    #[inline]
     pub fn is_allowed(&self, link: &CaseInsensitiveString) -> bool {
         if self.links_visited.contains(link) {
             false
@@ -592,6 +588,7 @@ impl Website {
     ///
     /// - is not blacklisted
     /// - is not forbidden in robot.txt file (if parameter is defined)
+    #[inline]
     pub fn is_allowed_default(&self, link: &CompactString) -> bool {
         if !self.configuration.blacklist_url.is_none() {
             match &self.configuration.blacklist_url {

@@ -3,20 +3,19 @@ use reqwest::Client;
 use reqwest::StatusCode;
 
 /// Perform a network request to a resource extracting all content as text.
-pub async fn fetch_page_html(url: &str, client: &Client) -> String {
+pub async fn fetch_page_html(url: &str, client: &Client) -> Option<String> {
     match client.get(url).send().await {
         Ok(res) if res.status() == StatusCode::OK => match res.text().await {
-            Ok(text) => text,
+            Ok(text) => Some(text),
             Err(_) => {
                 log("- error fetching {}", &url);
-
-                String::new()
+                None
             }
         },
-        Ok(_) => String::new(),
+        Ok(_) => None,
         Err(_) => {
             log("- error parsing html text {}", &url);
-            String::new()
+            None
         }
     }
 }
