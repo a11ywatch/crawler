@@ -72,7 +72,6 @@ impl AsRef<str> for CaseInsensitiveString {
 
 /// shared data
 pub type Shared = Arc<(
-    Semaphore,
     Client,
     (Selector, CompactString, SmallVec<[CompactString; 2]>),
 )>;
@@ -109,6 +108,20 @@ pub struct Website {
 
 /// hashset string_concat
 pub type Message = HashSet<CaseInsensitiveString>;
+
+lazy_static! {
+    static ref SEM: Semaphore = {
+        let logical = num_cpus::get();
+        let physical = num_cpus::get_physical();
+        let cors = if logical > physical {
+            (logical) / (physical) as usize
+        } else {
+            logical
+        } * 10;
+
+        Semaphore::const_new(if cors < 50 { 50 } else { cors })
+    };
+}
 
 impl Website {
     /// Initialize Website object with a start link to crawl.
@@ -255,7 +268,6 @@ impl Website {
         let throttle = self.get_delay();
         let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
         let shared: Shared = Arc::new((
-            Semaphore::new(200),
             client,
             get_page_selectors(
                 &self.domain,
@@ -281,11 +293,13 @@ impl Website {
 
                 let tx = tx.clone();
                 let shared = shared.clone();
+                let permit = SEM.acquire().await.unwrap();
 
                 task::spawn(async move {
                     {
-                        let page = Page::new(&link.0, &shared.1).await;
-                        let links = page.links(&shared.2, Some(true)).await;
+                        let page = Page::new(&link.0, &shared.0).await;
+                        let links = page.links(&shared.1, Some(true)).await;
+                        drop(permit);
 
                         if let Err(_) = tx.send(links) {
                             log("receiver dropped", "");
@@ -317,7 +331,6 @@ impl Website {
     ) {
         let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
         let shared: Shared = Arc::new((
-            Semaphore::new(200),
             client,
             get_page_selectors(
                 &self.domain,
@@ -343,12 +356,12 @@ impl Website {
         task::yield_now().await;
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(&handle, &shared, &rpcx, user_id, &txx)
+            self.sitemap_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
                 .await;
-        };
-
-        self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
-            .await;
+        } else {
+            self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
+                .await;
+        }
     }
 
     /// inner crawl pages until no links exist
@@ -364,7 +377,7 @@ impl Website {
         let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
         let mut links: HashSet<CaseInsensitiveString> =
             if self.is_allowed_default(&CompactString::new(&self.domain.as_str())) {
-                let page = Page::new(&self.domain, &shared.1).await;
+                let page = Page::new(&self.domain, &shared.0).await;
                 self.links_visited.insert(page.get_url().to_owned().into());
 
                 self.rpc_callback(&rpcx, &shared, &txx, &mut set, &self.domain, user_id)
@@ -372,7 +385,7 @@ impl Website {
 
                 let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
 
-                cu.extend(page.links(&shared.2, None).await);
+                cu.extend(page.links(&shared.1, None).await);
 
                 cu
             } else {
@@ -424,6 +437,7 @@ impl Website {
         handle: &tokio::task::JoinHandle<bool>,
         shared: &Shared,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
+        throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
     ) {
@@ -431,12 +445,16 @@ impl Website {
             string_concat!(self.domain.as_str(), "sitemap.xml").into(),
         ));
 
+        // init the base crawl and extend sitemap results after
+        self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
+            .await;
+
         while !handle.is_finished() && !self.sitemap_url.is_none() {
             let mut sitemap_added = false;
             let txx = txx.clone();
 
             match shared
-                .1
+                .0
                 .get(self.sitemap_url.as_ref().unwrap().as_str())
                 .send()
                 .await
@@ -444,43 +462,41 @@ impl Website {
                 Ok(response) => {
                     match response.text().await {
                         Ok(text) => {
-                            for entity in SiteMapReader::new(text.as_bytes()) {
+                            let mut stream =
+                                tokio_stream::iter(SiteMapReader::new(text.as_bytes()));
+
+                            while let Some(entity) = stream.next().await {
                                 if handle.is_finished() {
                                     break;
                                 };
                                 match entity {
                                     SiteMapEntity::Url(url_entry) => match url_entry.loc {
-                                        Location::None => {}
                                         Location::Url(url) => {
                                             let link = url.as_str().into();
 
                                             if !self.is_allowed(&link) {
                                                 continue;
-                                            };
-
-                                            self.rpc_callback_raw(
-                                                &rpcx, &shared, &txx, &link.0, user_id,
-                                            )
-                                            .await;
+                                            }
 
                                             self.links.insert(link);
+
+                                            // perform re-walk inside per link gathered
+                                            self.inner_crawl(
+                                                &handle, &shared, &rpcx, &throttle, user_id, &txx,
+                                            )
+                                            .await;
                                         }
-                                        Location::ParseErr(error) => {
-                                            log("parse error entry url: ", error.to_string())
-                                        }
+                                        Location::None | Location::ParseErr(_) => (),
                                     },
                                     SiteMapEntity::SiteMap(sitemap_entry) => {
                                         match sitemap_entry.loc {
-                                            Location::None => {}
                                             Location::Url(url) => {
                                                 self.sitemap_url
                                                     .replace(Box::new(url.as_str().into()));
 
                                                 sitemap_added = true;
                                             }
-                                            Location::ParseErr(err) => {
-                                                log("parse error sitemap url: ", err.to_string())
-                                            }
+                                            Location::None | Location::ParseErr(_) => (),
                                         }
                                     }
                                     SiteMapEntity::Err(err) => {
@@ -515,15 +531,14 @@ impl Website {
         let txx = txx.clone();
         let shared = shared.clone();
         let link = link.to_string();
+        let permit = SEM.acquire().await.unwrap();
 
         task::yield_now().await;
 
         set.spawn(async move {
-            let permit = shared.0.acquire().await.unwrap();
-
-            let page = Page::new(&link, &shared.1).await;
+            let page = Page::new(&link, &shared.0).await;
             let links = page
-                .links(&shared.2, Some(shared.0.available_permits() < 198))
+                .links(&shared.1, Some(SEM.available_permits() < 50))
                 .await;
 
             let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
@@ -537,37 +552,6 @@ impl Website {
         });
 
         task::yield_now().await;
-    }
-
-    /// perform the rpc callback raw without links
-    async fn rpc_callback_raw(
-        &self,
-        rpcx: &WebsiteServiceClient<Channel>,
-        shared: &Shared,
-        txx: &UnboundedSender<bool>,
-        link: &CompactString,
-        user_id: u32,
-    ) {
-        let mut rpcx = rpcx.clone();
-        let txx = txx.clone();
-        let shared = shared.clone();
-        let link = link.to_string();
-        task::yield_now().await;
-
-        task::spawn(async move {
-            {
-                let permit = shared.0.acquire().await.unwrap();
-
-                let page = Page::new(&link, &shared.1).await;
-                let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
-                drop(permit);
-
-                if let Err(_) = txx.send(x) {
-                    log("receiver dropped", "");
-                }
-            }
-            task::yield_now().await;
-        });
     }
 
     /// return `true` if URL:

@@ -2416,7 +2416,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.7.71"
+version = "0.7.72"
 dependencies = [
  "ahash",
  "cc",
@@ -2433,6 +2433,7 @@ dependencies = [
  "lazy_static",
  "log",
  "matches",
+ "num_cpus",
  "os_info",
  "percent-encoding",
  "prost",
