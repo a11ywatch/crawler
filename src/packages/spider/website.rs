@@ -16,6 +16,7 @@ use sitemap::{
 };
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
@@ -71,10 +72,12 @@ impl AsRef<str> for CaseInsensitiveString {
 }
 
 /// shared data
-pub type Shared = Arc<(
-    Client,
-    (Selector, CompactString, SmallVec<[CompactString; 2]>),
-)>;
+pub type Shared = Pin<
+    Arc<(
+        Client,
+        (Selector, CompactString, SmallVec<[CompactString; 2]>),
+    )>,
+>;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -119,7 +122,7 @@ lazy_static! {
             logical
         } * 10;
 
-        Semaphore::const_new(if cors < 50 { 50 } else { cors })
+        Semaphore::const_new(cors.max(50))
     };
 }
 
@@ -267,7 +270,7 @@ impl Website {
     async fn crawl_concurrent(&mut self, client: Client) {
         let throttle = self.get_delay();
         let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
-        let shared: Shared = Arc::new((
+        let shared: Shared = Arc::pin((
             client,
             get_page_selectors(
                 &self.domain,
@@ -330,7 +333,7 @@ impl Website {
         user_id: u32,
     ) {
         let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
-        let shared: Shared = Arc::new((
+        let shared: Shared = Arc::pin((
             client,
             get_page_selectors(
                 &self.domain,
@@ -339,7 +342,7 @@ impl Website {
             ),
         ));
         let rpcx = Arc::new(rpcx);
-        let throttle = self.get_delay();
+        let throttle = Box::pin(self.get_delay());
 
         // determine if crawl is still active
         let handle = task::spawn(async move {
@@ -375,7 +378,9 @@ impl Website {
         txx: &UnboundedSender<bool>,
     ) {
         let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
-        let mut links: HashSet<CaseInsensitiveString> =
+        let mut links: HashSet<CaseInsensitiveString> = {
+            let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
+
             if self.is_allowed_default(&CompactString::new(&self.domain.as_str())) {
                 let page = Page::new(&self.domain, &shared.0).await;
                 self.links_visited.insert(page.get_url().to_owned().into());
@@ -383,14 +388,11 @@ impl Website {
                 self.rpc_callback(&rpcx, &shared, &txx, &mut set, &self.domain, user_id)
                     .await;
 
-                let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
-
                 cu.extend(page.links(&shared.1, None).await);
+            }
 
-                cu
-            } else {
-                self.links.drain().collect()
-            };
+            cu
+        };
 
         loop {
             let stream =
