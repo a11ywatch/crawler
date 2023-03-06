@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.7.73"
+version = "0.7.75"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"

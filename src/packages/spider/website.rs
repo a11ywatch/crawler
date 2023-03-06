@@ -20,6 +20,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
+use tokio::runtime::Handle;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::Semaphore;
 use tokio::task;
@@ -116,13 +117,15 @@ lazy_static! {
     static ref SEM: Semaphore = {
         let logical = num_cpus::get();
         let physical = num_cpus::get_physical();
-        let cors = if logical > physical {
-            (logical) / (physical) as usize
-        } else {
-            logical
-        } * 10;
 
-        Semaphore::const_new(cors.max(50))
+        Semaphore::const_new(
+            (if logical > physical {
+                (logical) / (physical) as usize
+            } else {
+                logical
+            } * 10)
+                .max(65),
+        )
     };
 }
 
@@ -343,6 +346,7 @@ impl Website {
         ));
         let rpcx = Arc::new(rpcx);
         let throttle = Box::pin(self.get_delay());
+        let chandle = Handle::current();
 
         // determine if crawl is still active
         let handle = task::spawn(async move {
@@ -359,10 +363,10 @@ impl Website {
         task::yield_now().await;
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
+            self.sitemap_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx, &chandle)
                 .await;
         } else {
-            self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
+            self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx, &chandle)
                 .await;
         }
     }
@@ -376,6 +380,7 @@ impl Website {
         throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
+        chandle: &Handle,
     ) {
         let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
         let mut links: HashSet<CaseInsensitiveString> = {
@@ -385,8 +390,16 @@ impl Website {
                 let page = Page::new(&self.domain, &shared.0).await;
                 self.links_visited.insert(page.get_url().to_owned().into());
 
-                self.rpc_callback(&rpcx, &shared, &txx, &mut set, &self.domain, user_id)
-                    .await;
+                self.rpc_callback(
+                    &rpcx,
+                    &shared,
+                    &txx,
+                    &mut set,
+                    &self.domain,
+                    user_id,
+                    chandle,
+                )
+                .await;
 
                 cu.extend(page.links(&shared.1, None).await);
             }
@@ -412,7 +425,7 @@ impl Website {
                 }
                 self.links_visited.insert(link.clone());
                 log("fetch", &link);
-                self.rpc_callback(&rpcx, &shared, &txx, &mut set, &link.0, user_id)
+                self.rpc_callback(&rpcx, &shared, &txx, &mut set, &link.0, user_id, chandle)
                     .await;
             }
             drop(txx);
@@ -442,13 +455,14 @@ impl Website {
         throttle: &Duration,
         user_id: u32,
         txx: &UnboundedSender<bool>,
+        chandle: &Handle,
     ) {
         self.sitemap_url = Some(Box::new(
             string_concat!(self.domain.as_str(), "sitemap.xml").into(),
         ));
 
         // init the base crawl and extend sitemap results after
-        self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx)
+        self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx, &chandle)
             .await;
 
         while !handle.is_finished() && !self.sitemap_url.is_none() {
@@ -485,6 +499,7 @@ impl Website {
                                             // perform re-walk inside per link gathered
                                             self.inner_crawl(
                                                 &handle, &shared, &rpcx, &throttle, user_id, &txx,
+                                                &chandle,
                                             )
                                             .await;
                                         }
@@ -528,6 +543,7 @@ impl Website {
         set: &mut JoinSet<HashSet<CaseInsensitiveString>>,
         link: &CompactString,
         user_id: u32,
+        chandle: &Handle,
     ) {
         let mut rpcx = rpcx.clone();
         let txx = txx.clone();
@@ -537,21 +553,24 @@ impl Website {
 
         task::yield_now().await;
 
-        set.spawn(async move {
-            let page = Page::new(&link, &shared.0).await;
-            let links = page
-                .links(&shared.1, Some(SEM.available_permits() < 50))
-                .await;
+        set.spawn_on(
+            async move {
+                let page = Page::new(&link, &shared.0).await;
+                let links = page
+                    .links(&shared.1, Some(true))
+                    .await;
 
-            let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
-            drop(permit);
+                let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
+                drop(permit);
 
-            if let Err(_) = txx.send(x) {
-                log("receiver dropped", "");
-            };
+                if let Err(_) = txx.send(x) {
+                    log("receiver dropped", "");
+                };
 
-            links
-        });
+                links
+            },
+            &chandle,
+        );
 
         task::yield_now().await;
     }
