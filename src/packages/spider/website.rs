@@ -289,17 +289,17 @@ impl Website {
             let stream = tokio_stream::iter(&self.links).throttle(throttle);
             tokio::pin!(stream);
 
-            while let Some(l) = stream.next().await {
-                if !self.is_allowed(l) {
+            while let Some(link) = stream.next().await {
+                if !self.is_allowed(&link) {
                     continue;
                 }
-                log("fetch", &l);
-                let link = l.clone();
-                self.links_visited.insert(l.to_owned());
+                log("fetch", &link);
+                self.links_visited.insert(link.clone());
+                let permit = SEM.acquire().await.unwrap();
 
                 let tx = tx.clone();
                 let shared = shared.clone();
-                let permit = SEM.acquire().await.unwrap();
+                let link = link.clone();
 
                 task::spawn(async move {
                     {
@@ -321,7 +321,9 @@ impl Website {
             }
 
             self.links.clone_from(&(&new_links - &self.links_visited));
+
             new_links.clear();
+
             if new_links.capacity() > 100 {
                 new_links.shrink_to_fit()
             }
@@ -435,9 +437,12 @@ impl Website {
             }
 
             while let Some(res) = set.join_next().await {
-                let msg = res.unwrap();
-                links.extend(&msg - &self.links_visited);
-                task::yield_now().await;
+                match res {
+                    Ok(msg) => {
+                        links.extend(&msg - &self.links_visited);
+                    }
+                    _ => ()
+                };
             }
 
             if links.is_empty() || handle.is_finished() {
@@ -545,11 +550,11 @@ impl Website {
         user_id: u32,
         chandle: &Handle,
     ) {
+        let permit = SEM.acquire().await.unwrap();
         let mut rpcx = rpcx.clone();
         let txx = txx.clone();
         let shared = shared.clone();
         let link = link.to_string();
-        let permit = SEM.acquire().await.unwrap();
 
         task::yield_now().await;
 
