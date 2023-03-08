@@ -17,6 +17,8 @@ use sitemap::{
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
 use std::pin::Pin;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
@@ -77,6 +79,7 @@ pub type Shared = Pin<
     Arc<(
         Client,
         (Selector, CompactString, SmallVec<[CompactString; 2]>),
+        AtomicBool,
     )>,
 >;
 
@@ -273,7 +276,12 @@ impl Website {
     async fn crawl_concurrent(&mut self, client: Client) {
         let throttle = self.get_delay();
         let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
-        let shared: Shared = Arc::pin((
+        let shared: Pin<
+            Arc<(
+                Client,
+                (Selector, CompactString, SmallVec<[CompactString; 2]>),
+            )>,
+        > = Arc::pin((
             client,
             get_page_selectors(
                 &self.domain,
@@ -337,7 +345,6 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        let (txx, mut rxx): (UnboundedSender<bool>, UnboundedReceiver<bool>) = unbounded_channel();
         let shared: Shared = Arc::pin((
             client,
             get_page_selectors(
@@ -345,30 +352,19 @@ impl Website {
                 self.configuration.subdomains,
                 self.configuration.tld,
             ),
+            AtomicBool::new(true),
         ));
         let rpcx = Arc::new(rpcx);
         let throttle = Box::pin(self.get_delay());
         let chandle = Handle::current();
 
-        // determine if crawl is still active
-        let handle = task::spawn(async move {
-            let mut crawl_valid = true;
-            while let Some(msg) = rxx.recv().await {
-                if !msg {
-                    crawl_valid = false;
-                    break;
-                }
-            }
-            crawl_valid
-        });
-
         task::yield_now().await;
 
         if self.configuration.sitemap {
-            self.sitemap_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx, &chandle)
+            self.sitemap_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
                 .await;
         } else {
-            self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx, &chandle)
+            self.inner_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
                 .await;
         }
     }
@@ -376,12 +372,10 @@ impl Website {
     /// inner crawl pages until no links exist
     async fn inner_crawl(
         &mut self,
-        handle: &tokio::task::JoinHandle<bool>,
         shared: &Shared,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
         throttle: &Duration,
         user_id: u32,
-        txx: &UnboundedSender<bool>,
         chandle: &Handle,
     ) {
         let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
@@ -392,16 +386,8 @@ impl Website {
                 let page = Page::new(&self.domain, &shared.0).await;
                 self.links_visited.insert(page.get_url().to_owned().into());
 
-                self.rpc_callback(
-                    &rpcx,
-                    &shared,
-                    &txx,
-                    &mut set,
-                    &self.domain,
-                    user_id,
-                    chandle,
-                )
-                .await;
+                self.rpc_callback(&rpcx, &shared, &mut set, &self.domain, user_id, chandle)
+                    .await;
 
                 cu.extend(page.links(&shared.1, None).await);
             }
@@ -415,11 +401,9 @@ impl Website {
                     .throttle(*throttle);
             tokio::pin!(stream);
 
-            // clone the unbounded sender
-            let txx = txx.clone();
-
             while let Some(link) = stream.next().await {
-                if handle.is_finished() {
+                if !shared.2.load(Ordering::Relaxed) {
+                    set.shutdown().await;
                     break;
                 }
                 if !self.is_allowed(&link) {
@@ -427,25 +411,27 @@ impl Website {
                 }
                 self.links_visited.insert(link.clone());
                 log("fetch", &link);
-                self.rpc_callback(&rpcx, &shared, &txx, &mut set, &link.0, user_id, chandle)
+                self.rpc_callback(&rpcx, &shared, &mut set, &link.0, user_id, chandle)
                     .await;
             }
-            drop(txx);
 
             if links.capacity() >= 1500 {
                 links.shrink_to_fit();
             }
 
             while let Some(res) = set.join_next().await {
+                if !shared.2.load(Ordering::Relaxed) {
+                    break;
+                }
                 match res {
                     Ok(msg) => {
                         links.extend(&msg - &self.links_visited);
                     }
-                    _ => ()
+                    _ => (),
                 };
             }
 
-            if links.is_empty() || handle.is_finished() {
+            if links.is_empty() || !shared.2.load(Ordering::Relaxed) {
                 break;
             }
         }
@@ -454,12 +440,10 @@ impl Website {
     /// get the entire list of urls in a sitemap
     pub async fn sitemap_crawl(
         &mut self,
-        handle: &tokio::task::JoinHandle<bool>,
         shared: &Shared,
         rpcx: &Arc<&mut WebsiteServiceClient<Channel>>,
         throttle: &Duration,
         user_id: u32,
-        txx: &UnboundedSender<bool>,
         chandle: &Handle,
     ) {
         self.sitemap_url = Some(Box::new(
@@ -467,12 +451,11 @@ impl Website {
         ));
 
         // init the base crawl and extend sitemap results after
-        self.inner_crawl(&handle, &shared, &rpcx, &throttle, user_id, &txx, &chandle)
+        self.inner_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
             .await;
 
-        while !handle.is_finished() && !self.sitemap_url.is_none() {
+        while shared.2.load(Ordering::Relaxed) && !self.sitemap_url.is_none() {
             let mut sitemap_added = false;
-            let txx = txx.clone();
 
             match shared
                 .0
@@ -487,7 +470,7 @@ impl Website {
                                 tokio_stream::iter(SiteMapReader::new(text.as_bytes()));
 
                             while let Some(entity) = stream.next().await {
-                                if handle.is_finished() {
+                                if !shared.2.load(Ordering::Relaxed) {
                                     break;
                                 };
                                 match entity {
@@ -503,8 +486,7 @@ impl Website {
 
                                             // perform re-walk inside per link gathered
                                             self.inner_crawl(
-                                                &handle, &shared, &rpcx, &throttle, user_id, &txx,
-                                                &chandle,
+                                                &shared, &rpcx, &throttle, user_id, &chandle,
                                             )
                                             .await;
                                         }
@@ -544,7 +526,6 @@ impl Website {
         &self,
         rpcx: &WebsiteServiceClient<Channel>,
         shared: &Shared,
-        txx: &UnboundedSender<bool>,
         set: &mut JoinSet<HashSet<CaseInsensitiveString>>,
         link: &CompactString,
         user_id: u32,
@@ -552,7 +533,6 @@ impl Website {
     ) {
         let permit = SEM.acquire().await.unwrap();
         let mut rpcx = rpcx.clone();
-        let txx = txx.clone();
         let shared = shared.clone();
         let link = link.to_string();
 
@@ -561,16 +541,14 @@ impl Website {
         set.spawn_on(
             async move {
                 let page = Page::new(&link, &shared.0).await;
-                let links = page
-                    .links(&shared.1, Some(true))
-                    .await;
+                let links = page.links(&shared.1, Some(true)).await;
 
                 let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
                 drop(permit);
 
-                if let Err(_) = txx.send(x) {
-                    log("receiver dropped", "");
-                };
+                if !x {
+                    shared.2.store(false, Ordering::Relaxed);
+                }
 
                 links
             },
