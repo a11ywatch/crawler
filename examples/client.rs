@@ -67,7 +67,7 @@ impl WebsiteService for MyWebsiteService {
         request: Request<ScanParams>,
     ) -> EchoResult<Self::ScanStreamStream> {
         let req = request.into_inner();
-        println!("Received page {:?}", req);
+        println!("Received {:?}", req.pages[0]);
 
         let repeat = std::iter::repeat(ScanStreamResponse {
             message: req.domain,
@@ -76,15 +76,12 @@ impl WebsiteService for MyWebsiteService {
         let mut stream = Box::pin(tokio_stream::iter(repeat));
         let (tx, rx) = mpsc::channel(1);
 
-        tokio::spawn(async move {
-            match stream.next().await {
-                Some(item) => match tx.send(Ok(item)).await {
-                    Ok(_) => {}
-                    Err(_item) => {}
-                },
-                _ => {}
-            }
-        });
+        match stream.next().await {
+            Some(item) => match tx.send(Ok(item)).await {
+                _ => (),
+            },
+            _ => (),
+        }
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
@@ -147,10 +144,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+    let args: Vec<String> = std::env::args().collect();
 
     let mut client = create_client().await.unwrap();
     let scan_request = ScanRequest {
-        url: "https://jeffmendez.com".into(),
+        url: if args.len() > 1 {
+            args[1].clone()
+        } else {
+            "https://jeffmendez.com".into()
+        },
         ..Default::default()
     };
 
