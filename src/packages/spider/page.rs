@@ -321,10 +321,7 @@ impl Page {
 
                         if can_process {
                             if abs.scheme() != parent_host_scheme.as_str() {
-                                unsafe {
-                                    abs.set_scheme(parent_host_scheme.as_str())
-                                        .unwrap_err_unchecked();
-                                }
+                                let _ = abs.set_scheme(parent_host_scheme.as_str());
                             }
 
                             let h = abs.as_str();
