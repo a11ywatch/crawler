@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.7.80"
+version = "0.7.81"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -12,7 +12,7 @@ categories = ["accessibility", "asynchronous"]
 include = ["src/*", "build.rs", "proto/*", "LICENSE", "README.md"]
 
 [dependencies]
-tokio = { version = "^1.26.0", features = [ "rt-multi-thread", "macros", "sync", "time", "parking_lot" ] }
+tokio = { version = "^1.27.0", features = [ "rt-multi-thread", "macros", "sync", "time", "parking_lot" ] }
 tokio-stream = "0.1.12"
 tonic = { version = "0.8.3" }
 prost = "0.11.3"

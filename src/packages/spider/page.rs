@@ -143,7 +143,7 @@ impl Page {
                     Some(href) => {
                         let mut abs = self.abs_path(href);
                         let mut can_process = match abs.host_str() {
-                            Some(host) => host == parent_host.as_str(),
+                            Some(host) => parent_host.ends_with(host),
                             _ => false,
                         };
 
