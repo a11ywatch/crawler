@@ -1,11 +1,11 @@
 use std::io::Error;
 
 use ego_tree::{iter::Edge, NodeRef};
-use html5ever::serialize::{Serializer, TraversalScope};
+use fast_html5ever::serialize::{Serializer, TraversalScope};
 
 use super::Node;
 
-/// Serialize an HTML node using html5ever serializer.
+/// Serialize an HTML node using fast_html5ever serializer.
 pub(crate) fn serialize<S: Serializer>(
     self_node: NodeRef<Node>,
     serializer: &mut S,

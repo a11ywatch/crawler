@@ -4,10 +4,10 @@ use std::borrow::Cow;
 
 use ego_tree::iter::Nodes;
 use ego_tree::Tree;
-use html5ever::serialize::SerializeOpts;
-use html5ever::tree_builder::QuirksMode;
-use html5ever::QualName;
-use html5ever::{driver, serialize};
+use fast_html5ever::serialize::SerializeOpts;
+use fast_html5ever::tree_builder::QuirksMode;
+use fast_html5ever::QualName;
+use fast_html5ever::{driver, serialize};
 use tendril::TendrilSink;
 
 use crate::packages::scraper::element_ref::ElementRef;
@@ -19,7 +19,7 @@ use crate::packages::scraper::selector::Selector;
 /// Parsing does not fail hard. Instead, the `quirks_mode` is set and errors are added to the
 /// `errors` field. The `tree` will still be populated as best as possible.
 ///
-/// Implements the `TreeSink` trait from the `html5ever` crate, which allows HTML to be parsed.
+/// Implements the `TreeSink` trait from the `fast_html5ever` crate, which allows HTML to be parsed.
 #[derive(Debug, Clone)]
 pub struct Html {
     /// Parse errors.
@@ -56,11 +56,11 @@ impl Html {
     /// This is a convenience method for the following:
     ///
     /// ```
-    /// # extern crate html5ever;
+    /// # extern crate fast_html5ever;
     /// # extern crate tendril;
     /// # fn main() {
     /// # let document = "";
-    /// use html5ever::driver::{self, ParseOpts};
+    /// use fast_html5ever::driver::{self, ParseOpts};
     /// use crate::website_crawler::packages::scraper::Html;
     /// use tendril::TendrilSink;
     ///
@@ -107,7 +107,7 @@ impl Html {
     pub fn html(&self) -> String {
         let opts = SerializeOpts {
             scripting_enabled: false, // It's not clear what this does.
-            traversal_scope: html5ever::serialize::TraversalScope::IncludeNode,
+            traversal_scope: fast_html5ever::serialize::TraversalScope::IncludeNode,
             create_missing_parent: false,
         };
         let mut buf = Vec::new();

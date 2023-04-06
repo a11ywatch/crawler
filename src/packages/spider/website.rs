@@ -3,7 +3,6 @@ use super::configuration::Configuration;
 use super::page::{build, get_page_selectors, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
-use crate::packages::scraper::Selector;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
 use compact_str::CompactString;
 use hashbrown::HashSet;
@@ -78,7 +77,7 @@ impl AsRef<str> for CaseInsensitiveString {
 pub type Shared = Pin<
     Arc<(
         Client,
-        (Selector, CompactString, SmallVec<[CompactString; 2]>),
+        (CompactString, SmallVec<[CompactString; 2]>),
         AtomicBool,
     )>,
 >;
@@ -284,12 +283,8 @@ impl Website {
         );
 
         if selectors.is_some() {
-            let shared: Pin<
-                Arc<(
-                    Client,
-                    (Selector, CompactString, SmallVec<[CompactString; 2]>),
-                )>,
-            > = Arc::pin((client, unsafe { selectors.unwrap_unchecked() }));
+            let shared: Pin<Arc<(Client, (CompactString, SmallVec<[CompactString; 2]>))>> =
+                Arc::pin((client, unsafe { selectors.unwrap_unchecked() }));
             // crawl while links exists
             while !self.links.is_empty() {
                 let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
@@ -313,7 +308,7 @@ impl Website {
                     task::spawn(async move {
                         {
                             let page = Page::new(&link.0, &shared.0).await;
-                            let links = page.links(&shared.1, Some(true)).await;
+                            let links = page.links(&shared.1).await;
                             drop(permit);
 
                             if let Err(_) = tx.send(links) {
@@ -395,7 +390,7 @@ impl Website {
                 self.rpc_callback(&rpcx, &shared, &mut set, &self.domain, user_id, chandle)
                     .await;
 
-                cu.extend(page.links(&shared.1, None).await);
+                cu.extend(page.links(&shared.1).await);
             }
 
             cu
@@ -547,7 +542,7 @@ impl Website {
         set.spawn_on(
             async move {
                 let page = Page::new(&link, &shared.0).await;
-                let links = page.links(&shared.1, Some(true)).await;
+                let links = page.links(&shared.1).await;
 
                 let x = monitor(&mut rpcx, link, user_id, page.html.unwrap_or_default()).await;
                 drop(permit);

@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.7.79"
+version = "0.7.80"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -37,7 +37,7 @@ matches = "0.1.10"
 cssparser = "0.29.6"
 smallvec = "1.10.0"
 ego-tree = "0.6.2"
-html5ever = "0.26.0"
+fast_html5ever = "0.26.1"
 num_cpus = "1.15.0"
 
 [target.'cfg(all(not(target_os = "android"), not(target_os = "freebsd")))'.dependencies]

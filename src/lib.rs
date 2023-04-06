@@ -13,7 +13,7 @@ extern crate lazy_static;
 pub extern crate compact_str;
 pub use packages::spider;
 #[macro_use]
-extern crate html5ever;
+extern crate fast_html5ever;
 #[macro_use]
 extern crate string_concat;
 

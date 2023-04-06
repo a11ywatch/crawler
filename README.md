@@ -12,7 +12,7 @@ Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.htm
 
 This project requires that you start up another gRPC server on port `50051` following the [proto spec](https://github.com/a11ywatch/protobuf/blob/main/website.proto).
 
-The user agent is spoofed on each crawl to a random agent and the indexer extends [spider](https://github.com/madeindjs/spider) as the base.
+The user agent is spoofed on each crawl to a random agent and the indexer extends [spider](https://github.com/spider-rs/spider) as the base.
 
 1. `cargo run` or `docker compose up`
 
@@ -119,8 +119,6 @@ https://user-images.githubusercontent.com/8095978/221221122-cfed83aa-6ca1-4122-a
 
 ### Dependencies
 
-npm is required to install the protcol buffers.
-
 In order to build `crawler` locally >= 0.5.0, you need the `protoc` Protocol Buffers compiler, along with Protocol Buffers resource files.
 
 #### Ubuntu
@@ -159,11 +157,6 @@ This is required since every request spawns a thread. Isolating the context dras
 ## Help
 
 If you need help implementing the gRPC server to receive the pages or links when found check out the [gRPC node example](https://github.com/A11yWatch/a11ywatch-core/blob/main/src/proto/website-server.ts) for a starting point .
-
-## Donations
-
-Building the project is a bit expensive, we take all contributions including help with cost to deploy the best docker images for everyone to utilize.
-If you want to help send an email to [a11ywatch support](support@a11ywatch.com). At A11yWatch we use a custom variation of the project and we do not need to target other platforms since we deploy on similiar architecture. Helping give back to the community requires a bit more time and effort for some of the solutions that we released to the community.
 
 ## LICENSE
 

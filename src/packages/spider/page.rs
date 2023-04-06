@@ -1,4 +1,4 @@
-use crate::packages::scraper::{ElementRef, Html, Selector};
+use crate::packages::scraper::Html;
 use crate::spider::utils::fetch_page_html;
 use crate::spider::website::CaseInsensitiveString;
 use compact_str::CompactString;
@@ -17,13 +17,6 @@ pub struct Page {
     base: Url,
 }
 
-/// CSS query selector to ignore all resources that are not valid web pages.
-const MEDIA_IGNORE_SELECTOR: &str = r#":not([style*="display: none"]):not([style*="visibility: hidden"]):not([href$=".ico"]):not([href$=".png"]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".svg"]):not([href$=".xlsx"]):not([href$=".img"]):not([href$=".webp"]):not([href$=".gif"]):not([href$=".pdf"]):not([href$=".tiff"]):not([href$=".mov"]):not([href$=".wav"]):not([href$=".mp3"]):not([href$=".mp4"]):not([href$=".ogg"]):not([href$=".webm"]):not([href$=".sql"]):not([href$=".zip"]):not([href$=".doc"]):not([href$=".docx"]):not([href$=".git"]):not([href$=".json"]):not([href$=".xml"]):not([href$=".css"]):not([href$=".md"]):not([href$=".txt"]):not([href$=".js"]):not([href$=".jsx"]):not([href$=".csv"])"#;
-/// CSS query selector for all relative links that includes MEDIA_IGNORE_SELECTOR
-const MEDIA_SELECTOR_RELATIVE: &str = r#"a[href^="/"]:not([href$=".ico"]):not([href$=".png"]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".svg"]):not([href$=".xlsx"]):not([href$=".img"]):not([href$=".webp"]):not([href$=".gif"]):not([href$=".pdf"]):not([href$=".tiff"]):not([href$=".mov"]):not([href$=".wav"]):not([href$=".mp3"]):not([href$=".mp4"]):not([href$=".ogg"]):not([href$=".webm"]):not([href$=".sql"]):not([href$=".zip"]):not([href$=".doc"]):not([href$=".docx"]):not([href$=".git"]):not([href$=".json"]):not([href$=".xml"]):not([href$=".css"]):not([href$=".md"]):not([href$=".txt"]):not([href$=".js"]):not([href$=".jsx"]):not([href$=".csv"])"#;
-/// CSS query selector for all common static MIME types.
-const MEDIA_SELECTOR_STATIC: &str = r#"[href$=".html"] [href$=".htm"] [href$=".asp"] [href$=".aspx"] [href$=".php"] [href$=".jps"] [href$=".jpsx"]"#;
-
 lazy_static! {
     /// include only list of resources
     static ref ONLY_RESOURCES: HashSet<CaseInsensitiveString> = {
@@ -37,30 +30,6 @@ lazy_static! {
 
         m
     };
-}
-
-/// build absolute page selectors
-fn build_absolute_selectors(url: &str) -> String {
-    let off_target = if url.starts_with("https") {
-        url.replacen("https://", "http://", 1)
-    } else {
-        url.replacen("http://", "https://", 1)
-    };
-
-    // handle unsecure and secure transports
-    string_concat::string_concat!(
-        "a[href^=",
-        r#"""#,
-        off_target,
-        r#"""#,
-        "i ],",
-        "a[href^=",
-        r#"""#,
-        url,
-        r#"""#,
-        "i ]",
-        MEDIA_IGNORE_SELECTOR
-    )
 }
 
 /// get the clean domain name
@@ -94,11 +63,7 @@ pub fn get_page_selectors(
     url: &str,
     subdomains: bool,
     tld: bool,
-) -> Option<(
-    Selector,
-    CompactString,
-    smallvec::SmallVec<[CompactString; 2]>,
-)> {
+) -> Option<(CompactString, smallvec::SmallVec<[CompactString; 2]>)> {
     match Url::parse(&url) {
         Ok(host) => {
             let host_name = CompactString::from(
@@ -115,96 +80,13 @@ pub fn get_page_selectors(
                 let dname = domain_name(&base);
                 let scheme = base.scheme();
 
-                // . extension
-                let tlds = if tld {
-                    string_concat::string_concat!(
-                        "a[href^=",
-                        r#"""#,
-                        scheme,
-                        "://",
-                        dname,
-                        r#"""#,
-                        "i ]",
-                        MEDIA_IGNORE_SELECTOR,
-                        ","
-                    )
-                // match everything that follows the base.
-                } else {
-                    "".to_string()
-                };
-
-                let absolute_selector = build_absolute_selectors(url);
-
-                // absolute urls with subdomains
-                let absolute_selector = &if subdomains {
-                    string_concat::string_concat!(
-                        absolute_selector,
-                        MEDIA_IGNORE_SELECTOR,
-                        ",",
-                        "a[href^=",
-                        r#"""#,
-                        scheme,
-                        r#"""#,
-                        "]",
-                        "[href*=",
-                        r#"""#,
-                        ".",
-                        dname,
-                        ".",
-                        r#"""#,
-                        "i ]",
-                        MEDIA_IGNORE_SELECTOR
-                    )
-                } else {
-                    absolute_selector
-                };
-
                 // static html group parse
                 Some((
-                    unsafe {
-                        Selector::parse(&string_concat::string_concat!(
-                            tlds,
-                            MEDIA_SELECTOR_RELATIVE,
-                            ",",
-                            absolute_selector,
-                            ",",
-                            MEDIA_SELECTOR_RELATIVE,
-                            " ",
-                            MEDIA_SELECTOR_STATIC,
-                            ", ",
-                            absolute_selector,
-                            " ",
-                            MEDIA_SELECTOR_STATIC
-                        ))
-                        .unwrap_unchecked()
-                    },
                     dname.into(),
                     smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
                 ))
             } else {
-                let absolute_selector = build_absolute_selectors(url);
-                let static_html_selector = string_concat::string_concat!(
-                    MEDIA_SELECTOR_RELATIVE,
-                    " ",
-                    MEDIA_SELECTOR_STATIC,
-                    ",",
-                    " ",
-                    absolute_selector,
-                    " ",
-                    MEDIA_SELECTOR_STATIC
-                );
-
                 Some((
-                    unsafe {
-                        Selector::parse(&string_concat::string_concat!(
-                            MEDIA_SELECTOR_RELATIVE,
-                            ",",
-                            absolute_selector,
-                            ",",
-                            static_html_selector
-                        ))
-                        .unwrap_unchecked()
-                    },
                     CompactString::default(),
                     smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
                 ))
@@ -238,74 +120,20 @@ impl Page {
         unsafe { &self.html.as_deref().unwrap_unchecked() }
     }
 
-    /// Find all link hrefs using the ego tree extremely imp useful when concurrency is low
-    #[inline(always)]
-    pub async fn links_ego(
-        &self,
-        selectors: &(Selector, CompactString, SmallVec<[CompactString; 2]>),
-    ) -> HashSet<CaseInsensitiveString> {
-        let base_domain = &selectors.1;
-        let mut map: HashSet<CaseInsensitiveString> = HashSet::new();
-        let html = Html::parse_document(self.get_html());
-        tokio::task::yield_now().await;
-
-        // extremely fast ego tree handling
-        for node in html.tree.root().traverse() {
-            match node {
-                ego_tree::iter::Edge::Open(node_ref) => {
-                    if let Some(element) = ElementRef::wrap(node_ref) {
-                        if element.parent().is_some() && selectors.0.matches(&element) {
-                            match element.value().attr("href") {
-                                Some(val) => {
-                                    let abs = self.abs_path(val);
-
-                                    if base_domain.is_empty()
-                                        || base_domain.as_str() == domain_name(&abs)
-                                    {
-                                        let resource_ext = abs.as_str();
-                                        let resource_ext_size = resource_ext.len();
-                                        let resource =
-                                            &resource_ext[resource_ext_size - 5..resource_ext_size];
-
-                                        if let Some(position) = resource.find('.') {
-                                            if ONLY_RESOURCES.contains(
-                                                &CaseInsensitiveString::from(
-                                                    &resource[position + 1..resource.len()],
-                                                ),
-                                            ) {
-                                                map.insert(resource_ext.into());
-                                            }
-                                        } else {
-                                            map.insert(resource_ext.into());
-                                        }
-                                    }
-                                }
-                                None => (),
-                            }
-                        }
-                    }
-                }
-                _ => (),
-            }
-        }
-
-        map
-    }
-
     /// Find the links as a stream using string resource validation
     #[inline(always)]
     pub async fn links_stream(
         &self,
-        selectors: &(Selector, CompactString, SmallVec<[CompactString; 2]>),
+        selectors: &(CompactString, SmallVec<[CompactString; 2]>),
     ) -> HashSet<CaseInsensitiveString> {
-        let base_domain = &selectors.1;
+        let base_domain = &selectors.0;
 
         let mut map: HashSet<CaseInsensitiveString> = HashSet::new();
         let html = Box::new(Html::parse_document(self.get_html()));
         tokio::task::yield_now().await;
 
         let mut stream = tokio_stream::iter(html.tree);
-        let parent_frags = &selectors.2; // todo: allow mix match tpt
+        let parent_frags = &selectors.1; // todo: allow mix match tpt
         let parent_host = &parent_frags[0];
         let parent_host_scheme = &parent_frags[1];
 
@@ -359,12 +187,10 @@ impl Page {
     #[inline(never)]
     pub async fn links(
         &self,
-        selectors: &(Selector, CompactString, SmallVec<[CompactString; 2]>),
-        streamed: Option<bool>,
+        selectors: &(CompactString, SmallVec<[CompactString; 2]>),
     ) -> HashSet<CaseInsensitiveString> {
-        match streamed {
-            _ if { !self.html.is_some() } => Default::default(),
-            None | Some(false) => self.links_ego(&(selectors)).await,
+        match self.html {
+            None => Default::default(),
             Some(_) => self.links_stream(&selectors).await,
         }
     }
@@ -387,7 +213,7 @@ async fn parse_links() {
     let page: Page = Page::new(&link_result, &client).await;
     let selector = get_page_selectors(&link_result, false, false);
 
-    let links = page.links(&selector.unwrap(), None).await;
+    let links = page.links(&selector.unwrap()).await;
 
     assert!(
         links.contains::<CaseInsensitiveString>(&"https://choosealicense.com/about/".into()),
