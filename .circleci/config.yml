@@ -3,7 +3,7 @@ jobs:
   crawler:
     machine:
       image: ubuntu-2004:2023.02.1
-    resource_class: xlarge
+    resource_class: large
     environment:
       RUSTFLAGS: "-D warnings"
       IMAGE_NAME: a11ywatch/crawler
@@ -27,7 +27,7 @@ jobs:
           name: Install buildx
           command: |
             curl --output docker-buildx --silent --show-error --location --fail --retry 3 \
-            "https://github.com/docker/buildx/releases/download/v0.9.1/buildx-v0.9.1.linux-amd64"
+            "https://github.com/docker/buildx/releases/download/v0.10.4/buildx-v0.10.4.linux-amd64"
 
             mkdir -p ~/.docker/cli-plugins
 

@@ -1,4 +1,4 @@
-FROM rust:1.67.1-alpine3.16 AS builder
+FROM rust:1.69.0-alpine3.17 AS builder
 
 WORKDIR /app
 COPY ../ .
@@ -12,7 +12,7 @@ RUN apk add --update \
 
 RUN cargo install --path .
 
-FROM alpine:3.16
+FROM alpine:3.17
 
 RUN apk upgrade  \
     && apk add \
