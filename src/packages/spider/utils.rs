@@ -1,13 +1,12 @@
 use log::{info, log_enabled, Level};
 use reqwest::Client;
-use reqwest::StatusCode;
 
-/// Perform a network request to a resource extracting all content as text streaming.
+/// Perform a network request to a resource extracting all content streaming.
 pub async fn fetch_page_html(url: &str, client: &Client) -> Option<String> {
     use tokio_stream::StreamExt;
 
     match client.get(url).send().await {
-        Ok(res) if res.status() == StatusCode::OK => {
+        Ok(res) if res.status().is_success() => {
             let mut stream = res.bytes_stream();
             let mut data: String = String::new();
 
@@ -24,12 +23,11 @@ pub async fn fetch_page_html(url: &str, client: &Client) -> Option<String> {
         }
         Ok(_) => None,
         Err(_) => {
-            log("- error parsing html text {}", &url);
+            log("- error parsing {}", &url);
             None
         }
     }
 }
-
 
 /// log to console if configuration verbose.
 pub fn log(message: &'static str, data: impl AsRef<str>) {
