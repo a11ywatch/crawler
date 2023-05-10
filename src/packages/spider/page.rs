@@ -155,7 +155,7 @@ impl Page {
                             let h = abs.as_str();
                             let hlen = h.len();
 
-                            if hlen > 4 {
+                            if hlen > 4 && !h.ends_with("/") {
                                 let hchars = &h[hlen - 5..hlen];
                                 if let Some(position) = hchars.find('.') {
                                     let resource_ext = &hchars[position + 1..hchars.len()];
