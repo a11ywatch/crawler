@@ -139,13 +139,11 @@ lazy_static! {
 impl Website {
     /// Initialize Website object with a start link to crawl.
     pub fn new(domain: &str) -> Self {
-        let domain_base = string_concat!(&domain, "/");
-
         Self {
             configuration: Box::new(Configuration::new()),
             links_visited: HashSet::new().into(),
-            links: HashSet::from([domain_base.clone().into()]), // todo: remove dup mem usage for domain tracking
-            domain: Box::new(CompactString::new(domain_base)),
+            domain: Box::new(CompactString::new(domain)),
+            links: HashSet::from([domain.into()]), // todo: remove dup mem usage for domain tracking
             robot_file_parser: None,
             sitemap_url: Default::default(),
         }
