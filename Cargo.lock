@@ -2366,7 +2366,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "ahash",
  "cc",

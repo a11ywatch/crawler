@@ -110,6 +110,8 @@ pub struct Website {
     robot_file_parser: Option<Box<RobotFileParser>>,
     /// current sitemap url
     sitemap_url: Option<Box<CompactString>>,
+    /// the domain url parsed
+    domain_parsed: Option<Box<Url>>,
 }
 
 /// hashset string_concat
@@ -146,6 +148,10 @@ impl Website {
             links: HashSet::from([domain.into()]), // todo: remove dup mem usage for domain tracking
             robot_file_parser: None,
             sitemap_url: Default::default(),
+            domain_parsed: match url::Url::parse(domain) {
+                Ok(u) => Some(Box::new(crate::spider::page::convert_abs_path(&u, "/"))),
+                _ => None,
+            },
         }
     }
 
@@ -175,7 +181,17 @@ impl Website {
                 .get_or_insert_with(|| RobotFileParser::new());
 
             if robot_file_parser.mtime() <= 4000 {
-                robot_file_parser.read(&client, &self.domain).await;
+                let host_str = match &self.domain_parsed {
+                    Some(domain) => &*domain.as_str(),
+                    _ => &self.domain,
+                };
+                if host_str.ends_with("/") {
+                    robot_file_parser.read(&client, &host_str).await;
+                } else {
+                    robot_file_parser
+                        .read(&client, &string_concat!(host_str, "/"))
+                        .await;
+                }
                 self.configuration.delay = Box::new(
                     robot_file_parser
                         .get_crawl_delay(&self.configuration.user_agent) // returns the crawl delay in seconds
@@ -620,11 +636,14 @@ async fn test_respect_robots_txt() {
     website.configuration.user_agent = Some(Box::new("*".into()));
 
     let client = website.setup().await;
+
     website.configure_robots_parser(&client).await;
 
-    assert_eq!(website.configuration.delay, Box::new(0));
+    assert_eq!(*website.configuration.delay, 0);
 
-    assert!(!website.is_allowed(&"https://stackoverflow.com/posts/".into()));
+    assert!(!&website.is_allowed(
+        &"https://stackoverflow.com/posts/".into(),
+    ));
 
     // test match for bing bot
     let mut website_second: Website = Website::new("https://www.mongodb.com");
@@ -634,7 +653,7 @@ async fn test_respect_robots_txt() {
     let client_second = website_second.setup().await;
     website_second.configure_robots_parser(&client_second).await;
 
-    assert_eq!(website_second.configuration.delay, Box::new(60000)); // should equal one minute in ms
+    assert_eq!(*website_second.configuration.delay, 60000); // should equal one minute in ms
 
     // test crawl delay with wildcard agent [DOES not work when using set agent]
     let mut website_third: Website = Website::new("https://www.mongodb.com");
@@ -643,5 +662,5 @@ async fn test_respect_robots_txt() {
 
     website_third.configure_robots_parser(&client_third).await;
 
-    assert_eq!(website_third.configuration.delay, Box::new(10000)); // should equal 10 seconds in ms
+    assert_eq!(*website_third.configuration.delay, 10000); // should equal 10 seconds in ms
 }
