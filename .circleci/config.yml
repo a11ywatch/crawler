@@ -2,12 +2,12 @@ version: 2.1
 jobs:
   crawler:
     machine:
-      image: ubuntu-2004:2023.02.1
+      image: ubuntu-2204:2023.04.2
     resource_class: large
     environment:
       RUSTFLAGS: "-D warnings"
       IMAGE_NAME: a11ywatch/crawler
-      DOCKER_BUILDKIT: 1
+      DOCKER_BUILDKIT: 0
       BUILDX_PLATFORMS: linux/amd64,linux/arm64
 
     steps:
@@ -55,17 +55,17 @@ jobs:
       - run: 
           name: Build and Push Latest (Alpine)
           no_output_timeout: 3h
-          command: DOCKER_BUILDKIT=0 docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
+          command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
 
       - run: 
           name: Build and Push (Debian)
           no_output_timeout: 3h
-          command: DOCKER_BUILDKIT=0 docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
+          command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
 
       - run: 
           name: Build and Push (Ubuntu)
           no_output_timeout: 3h
-          command: DOCKER_BUILDKIT=0  docker buildx build --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
+          command: docker buildx build --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
 
       - save_cache:
           paths:
