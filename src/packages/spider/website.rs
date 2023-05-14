@@ -197,14 +197,21 @@ impl Website {
             };
         }
 
+        let host_str = match url::Url::parse(&self.domain) {
+            Ok(u) => Some(u),
+            _ => None,
+        };
         let default_policy = reqwest::redirect::Policy::default();
-        let policy = reqwest::redirect::Policy::custom(move |attempt| {
-            if attempt.url().host_str() == Some("127.0.0.1") {
-                attempt.stop()
-            } else {
-                default_policy.redirect(attempt)
-            }
-        });
+        let policy = match host_str {
+            Some(host_s) => reqwest::redirect::Policy::custom(move |attempt| {
+                if attempt.url().host_str() != host_s.host_str() {
+                    attempt.stop()
+                } else {
+                    default_policy.redirect(attempt)
+                }
+            }),
+            _ => default_policy,
+        };
 
         let mut client = Client::builder()
             .default_headers(HEADERS.clone())
