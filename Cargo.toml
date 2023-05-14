@@ -39,6 +39,7 @@ smallvec = "1.10.0"
 ego-tree = "0.6.2"
 fast_html5ever = "0.26.1"
 num_cpus = "1.15.0"
+case_insensitive_string = { version =  "0.1.6", features = ["compact"] }
 
 [target.'cfg(all(not(target_os = "android"), not(target_os = "freebsd")))'.dependencies]
 jemallocator = { version = "0.5.0", optional = true }

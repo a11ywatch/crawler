@@ -57,15 +57,15 @@ jobs:
       #     no_output_timeout: 1h
       #     command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
 
-      - run: 
-          name: Build and Push (Debian)
-          no_output_timeout: 1h
-          command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
-
       # - run: 
-      #     name: Build and Push (Ubuntu)
+      #     name: Build and Push (Debian)
       #     no_output_timeout: 1h
-      #     command: docker buildx build --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
+      #     command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
+
+      - run: 
+          name: Build and Push (Ubuntu)
+          no_output_timeout: 1h
+          command: docker buildx build --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
 
       - save_cache:
           paths:

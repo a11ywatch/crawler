@@ -204,6 +204,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
+name = "case_insensitive_string"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5252d96f01ec50f29b85408fbc0e77d6707f72c80dbe21324610372a6811a031"
+dependencies = [
+ "compact_str",
+ "serde",
+]
+
+[[package]]
 name = "castaway"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2369,6 +2379,7 @@ name = "website_crawler"
 version = "0.8.2"
 dependencies = [
  "ahash",
+ "case_insensitive_string",
  "cc",
  "compact_str",
  "cssparser",

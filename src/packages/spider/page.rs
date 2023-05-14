@@ -1,6 +1,6 @@
 use crate::packages::scraper::Html;
 use crate::spider::utils::fetch_page_html;
-use crate::spider::website::CaseInsensitiveString;
+use case_insensitive_string::CaseInsensitiveString;
 use compact_str::CompactString;
 use hashbrown::HashSet;
 use reqwest::Client;

@@ -14,7 +14,6 @@ use sitemap::{
     structs::Location,
 };
 use smallvec::SmallVec;
-use std::hash::{Hash, Hasher};
 use std::pin::Pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -30,57 +29,7 @@ use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use ua_generator::ua::spoof_ua;
 use url::Url;
-
-/// case-insensitive string handling
-#[derive(Debug, Clone)]
-pub struct CaseInsensitiveString(CompactString);
-
-impl PartialEq for CaseInsensitiveString {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(&other.0)
-    }
-}
-
-impl Eq for CaseInsensitiveString {}
-
-impl Hash for CaseInsensitiveString {
-    #[inline]
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        for c in self.0.as_bytes() {
-            c.to_ascii_lowercase().hash(state)
-        }
-    }
-}
-
-impl From<&str> for CaseInsensitiveString {
-    #[inline]
-    fn from(s: &str) -> Self {
-        CaseInsensitiveString { 0: s.into() }
-    }
-}
-
-impl From<String> for CaseInsensitiveString {
-    fn from(s: String) -> Self {
-        CaseInsensitiveString { 0: s.into() }
-    }
-}
-
-impl AsRef<str> for CaseInsensitiveString {
-    #[inline]
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// shared data
-pub type Shared = Pin<
-    Arc<(
-        Client,
-        (CompactString, SmallVec<[CompactString; 2]>),
-        AtomicBool,
-    )>,
->;
+use case_insensitive_string::CaseInsensitiveString;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -116,6 +65,15 @@ pub struct Website {
 
 /// hashset string_concat
 pub type Message = HashSet<CaseInsensitiveString>;
+
+/// shared data
+pub type Shared = Pin<
+    Arc<(
+        Client,
+        (CompactString, SmallVec<[CompactString; 2]>),
+        AtomicBool,
+    )>,
+>;
 
 lazy_static! {
     static ref SEM: Semaphore = {
@@ -159,7 +117,7 @@ impl Website {
     pub fn get_pages(&self) -> Vec<Page> {
         self.links_visited
             .iter()
-            .map(|l| build(&l.0, Default::default()))
+            .map(|l| build(&l.inner(), Default::default()))
             .collect()
     }
 
@@ -333,7 +291,7 @@ impl Website {
 
                     task::spawn(async move {
                         {
-                            let page = Page::new(&link.0, &shared.0).await;
+                            let page = Page::new(&link.inner(), &shared.0).await;
                             let links = page.links(&shared.1).await;
                             drop(permit);
 
@@ -438,7 +396,7 @@ impl Website {
                 }
                 self.links_visited.insert(link.clone());
                 log("fetch", &link);
-                self.rpc_callback(&rpcx, &shared, &mut set, &link.0, user_id, chandle)
+                self.rpc_callback(&rpcx, &shared, &mut set, &link.inner(), user_id, chandle)
                     .await;
             }
 
@@ -595,7 +553,7 @@ impl Website {
         if self.links_visited.contains(link) {
             false
         } else {
-            self.is_allowed_default(&link.0)
+            self.is_allowed_default(&link.inner())
         }
     }
 
