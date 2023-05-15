@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler_example"
-version = "0.8.0"
+version = "0.8.3"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2018"
 description = "gRPC tokio based web crawler"
@@ -18,7 +18,7 @@ env_logger = "0.9.0"
 htr = "0.5.23"
 
 [dependencies.website_crawler]
-version = "0.8.0"
+version = "0.8.3"
 path = "../"
 default-features = false
 

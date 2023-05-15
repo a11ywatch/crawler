@@ -4,6 +4,7 @@ use super::page::{build, get_page_selectors, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
 use crate::rpc::client::{monitor, WebsiteServiceClient};
+use case_insensitive_string::CaseInsensitiveString;
 use compact_str::CompactString;
 use hashbrown::HashSet;
 use reqwest::header::CONNECTION;
@@ -29,7 +30,6 @@ use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use ua_generator::ua::spoof_ua;
 use url::Url;
-use case_insensitive_string::CaseInsensitiveString;
 
 /// Represents a website to crawl and gather all links.
 /// ```rust
@@ -599,9 +599,7 @@ async fn test_respect_robots_txt() {
 
     assert_eq!(*website.configuration.delay, 0);
 
-    assert!(!&website.is_allowed(
-        &"https://stackoverflow.com/posts/".into(),
-    ));
+    assert!(!&website.is_allowed(&"https://stackoverflow.com/posts/".into(),));
 
     // test match for bing bot
     let mut website_second: Website = Website::new("https://www.mongodb.com");
