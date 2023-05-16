@@ -152,16 +152,7 @@ impl Page {
                                 let _ = abs.set_scheme(parent_host_scheme.as_str());
                             }
 
-                            // full url path
-                            let resource_url = abs.clone();
-
-                            // clean the resource to check if valid crawl asset
-                            abs.set_query(None);
-
-                            let clean_resource = abs.as_str();
-                            let hlen = clean_resource.len();
-                            // a possible resource extension
-                            let hchars = &clean_resource[hlen - 5..hlen];
+                            let hchars = abs.path();
 
                             if hchars.len() > 4 {
                                 if let Some(position) = hchars.find('.') {
@@ -179,7 +170,7 @@ impl Page {
                                 && (base_domain.is_empty()
                                     || base_domain.as_str() == domain_name(&abs))
                             {
-                                map.insert(resource_url.as_str().to_string().into());
+                                map.insert(abs.as_str().to_string().into());
                             }
                         }
                     }
