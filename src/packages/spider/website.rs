@@ -257,63 +257,66 @@ impl Website {
 
     /// Start to crawl website concurrently
     async fn crawl_concurrent(&mut self, client: Client) {
-        let throttle = self.get_delay();
-        let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
-
-        let selectors = get_page_selectors(
-            &self.domain,
-            self.configuration.subdomains,
-            self.configuration.tld,
-        );
-
-        if selectors.is_some() {
-            let shared: Pin<Arc<(Client, (CompactString, SmallVec<[CompactString; 2]>))>> =
-                Arc::pin((client, unsafe { selectors.unwrap_unchecked() }));
-            // crawl while links exists
-            while !self.links.is_empty() {
-                let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
-                    unbounded_channel();
-
-                let stream = tokio_stream::iter(&self.links).throttle(throttle);
-                tokio::pin!(stream);
-
-                while let Some(link) = stream.next().await {
-                    if !self.is_allowed(&link) {
-                        continue;
-                    }
-                    log("fetch", &link);
-                    self.links_visited.insert(link.clone());
-                    let permit = SEM.acquire().await.unwrap();
-
-                    let tx = tx.clone();
-                    let shared = shared.clone();
-                    let link = link.clone();
-
-                    task::spawn(async move {
-                        {
-                            let page = Page::new(&link.inner(), &shared.0).await;
-                            let links = page.links(&shared.1).await;
-                            drop(permit);
-
-                            if let Err(_) = tx.send(links) {
-                                log("receiver dropped", "");
-                            }
+        // valid url to crawl
+        if self.domain_parsed.is_some() {
+            let throttle = self.get_delay();
+            let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
+    
+            let selectors = get_page_selectors(
+                &self.domain_parsed.as_ref().unwrap(),
+                self.configuration.subdomains,
+                self.configuration.tld,
+            );
+    
+            if selectors.is_some() {
+                let shared: Pin<Arc<(Client, (CompactString, SmallVec<[CompactString; 2]>))>> =
+                    Arc::pin((client, unsafe { selectors.unwrap_unchecked() }));
+                // crawl while links exists
+                while !self.links.is_empty() {
+                    let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
+                        unbounded_channel();
+    
+                    let stream = tokio_stream::iter(&self.links).throttle(throttle);
+                    tokio::pin!(stream);
+    
+                    while let Some(link) = stream.next().await {
+                        if !self.is_allowed(&link) {
+                            continue;
                         }
-                    });
-                }
-
-                drop(tx);
-
-                while let Some(msg) = rx.recv().await {
-                    new_links.extend(msg);
-                }
-
-                self.links.clone_from(&(&new_links - &self.links_visited));
-
-                new_links.clear();
-
-                if new_links.capacity() > 100 {
-                    new_links.shrink_to_fit()
+                        log("fetch", &link);
+                        self.links_visited.insert(link.clone());
+                        let permit = SEM.acquire().await.unwrap();
+    
+                        let tx = tx.clone();
+                        let shared = shared.clone();
+                        let link = link.clone();
+    
+                        task::spawn(async move {
+                            {
+                                let page = Page::new(&link.inner(), &shared.0).await;
+                                let links = page.links(&shared.1).await;
+                                drop(permit);
+    
+                                if let Err(_) = tx.send(links) {
+                                    log("receiver dropped", "");
+                                }
+                            }
+                        });
+                    }
+    
+                    drop(tx);
+    
+                    while let Some(msg) = rx.recv().await {
+                        new_links.extend(msg);
+                    }
+    
+                    self.links.clone_from(&(&new_links - &self.links_visited));
+    
+                    new_links.clear();
+    
+                    if new_links.capacity() > 100 {
+                        new_links.shrink_to_fit()
+                    }
                 }
             }
         }
@@ -326,30 +329,32 @@ impl Website {
         rpcx: &mut WebsiteServiceClient<Channel>,
         user_id: u32,
     ) {
-        let selectors = get_page_selectors(
-            &self.domain,
-            self.configuration.subdomains,
-            self.configuration.tld,
-        );
-
-        if selectors.is_some() {
-            let shared: Shared = Arc::pin((
-                client,
-                unsafe { selectors.unwrap_unchecked() },
-                AtomicBool::new(true),
-            ));
-            let rpcx = Arc::new(rpcx);
-            let throttle = Box::pin(self.get_delay());
-            let chandle = Handle::current();
-
-            task::yield_now().await;
-
-            if self.configuration.sitemap {
-                self.sitemap_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
-                    .await;
-            } else {
-                self.inner_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
-                    .await;
+        if self.domain_parsed.is_some() {
+            let selectors = get_page_selectors(
+                &self.domain_parsed.as_ref().unwrap(),
+                self.configuration.subdomains,
+                self.configuration.tld,
+            );
+    
+            if selectors.is_some() {
+                let shared: Shared = Arc::pin((
+                    client,
+                    unsafe { selectors.unwrap_unchecked() },
+                    AtomicBool::new(true),
+                ));
+                let rpcx = Arc::new(rpcx);
+                let throttle = Box::pin(self.get_delay());
+                let chandle = Handle::current();
+    
+                task::yield_now().await;
+    
+                if self.configuration.sitemap {
+                    self.sitemap_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
+                        .await;
+                } else {
+                    self.inner_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
+                        .await;
+                }
             }
         }
     }
@@ -367,9 +372,10 @@ impl Website {
         let mut links: HashSet<CaseInsensitiveString> = {
             let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
 
-            if self.is_allowed_default(&CompactString::new(&self.domain.as_str())) {
+            if self.is_allowed_default(&self.domain) {
                 let page = Page::new(&self.domain, &shared.0).await;
-                self.links_visited.insert(page.get_url().to_owned().into());
+
+                self.links_visited.insert(page.get_url().into());
 
                 self.rpc_callback(&rpcx, &shared, &mut set, &self.domain, user_id, chandle)
                     .await;
@@ -396,6 +402,7 @@ impl Website {
                 }
                 self.links_visited.insert(link.clone());
                 log("fetch", &link);
+
                 self.rpc_callback(&rpcx, &shared, &mut set, &link.inner(), user_id, chandle)
                     .await;
             }

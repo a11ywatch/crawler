@@ -60,40 +60,35 @@ pub fn convert_abs_path(base: &Url, href: &str) -> Url {
 
 /// html selector for valid web pages for domain.
 pub fn get_page_selectors(
-    url: &str,
+    host: &Url,
     subdomains: bool,
     tld: bool,
-) -> Option<(CompactString, smallvec::SmallVec<[CompactString; 2]>)> {
-    match Url::parse(&url) {
-        Ok(host) => {
+) -> Option<(CompactString, SmallVec<[CompactString; 2]>)> {
+
             let host_name = CompactString::from(
                 match convert_abs_path(&host, Default::default()).host_str() {
                     Some(host) => host.to_ascii_lowercase(),
                     _ => Default::default(),
                 },
             );
-
             let scheme = host.scheme();
 
-            if tld || subdomains {
-                let base = Url::parse(&url).expect("Invalid page URL");
-                let dname = domain_name(&base);
-                let scheme = base.scheme();
+            Some(if tld || subdomains {
+                let dname = domain_name(&host);
+                let scheme = host.scheme();
 
                 // static html group parse
-                Some((
+                (
                     dname.into(),
                     smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
-                ))
+                )
             } else {
-                Some((
+                (
                     CompactString::default(),
                     smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
-                ))
-            }
-        }
-        _ => None,
-    }
+                )
+            })
+        
 }
 
 /// Instantiate a new page without scraping it (used for testing purposes).
@@ -128,11 +123,12 @@ impl Page {
     ) -> HashSet<CaseInsensitiveString> {
         let base_domain = &selectors.0;
 
-        let mut map: HashSet<CaseInsensitiveString> = HashSet::new();
         let html = Box::new(Html::parse_document(self.get_html()));
         tokio::task::yield_now().await;
 
         let mut stream = tokio_stream::iter(html.tree);
+        let mut map: HashSet<CaseInsensitiveString> = HashSet::new();
+
         let parent_frags = &selectors.1; // todo: allow mix match tpt
         let parent_host = &parent_frags[0];
         let parent_host_scheme = &parent_frags[1];
@@ -142,6 +138,8 @@ impl Page {
                 match element.attr("href") {
                     Some(href) => {
                         let mut abs = self.abs_path(href);
+
+                        // determine if the crawl can continue based on host match
                         let mut can_process = match abs.host_str() {
                             Some(host) => parent_host.ends_with(host),
                             _ => false,
@@ -154,15 +152,13 @@ impl Page {
 
                             let hchars = abs.path();
 
-                            if hchars.len() > 4 {
-                                if let Some(position) = hchars.find('.') {
-                                    let resource_ext = &hchars[position + 1..hchars.len()];
+                            if let Some(position) = hchars.find('.') {
+                                let resource_ext = &hchars[position + 1..hchars.len()];
 
-                                    if !ONLY_RESOURCES
-                                        .contains::<CaseInsensitiveString>(&resource_ext.into())
-                                    {
-                                        can_process = false;
-                                    }
+                                if !ONLY_RESOURCES
+                                    .contains::<CaseInsensitiveString>(&resource_ext.into())
+                                {
+                                    can_process = false;
                                 }
                             }
 
@@ -210,7 +206,7 @@ async fn parse_links() {
 
     let link_result = "https://choosealicense.com/";
     let page: Page = Page::new(&link_result, &client).await;
-    let selector = get_page_selectors(&link_result, false, false);
+    let selector = get_page_selectors(&Url::parse(link_result).unwrap(), false, false);
 
     let links = page.links(&selector.unwrap()).await;
 
