@@ -52,20 +52,20 @@ jobs:
           name: Setup buildx
           command: docker buildx create --driver docker-container --name local --buildkitd-flags '--allow-insecure-entitlement security.insecure' --use
 
-      # - run: 
-      #     name: Build and Push Latest (Alpine)
-      #     no_output_timeout: 1h
-      #     command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
+      - run: 
+          name: Build and Push Latest (Alpine)
+          no_output_timeout: 1h
+          command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
 
       # - run: 
       #     name: Build and Push (Debian)
       #     no_output_timeout: 1h
       #     command: docker buildx build  --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
 
-      - run: 
-          name: Build and Push (Ubuntu)
-          no_output_timeout: 1h
-          command: docker buildx build --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
+      # - run: 
+      #     name: Build and Push (Ubuntu)
+      #     no_output_timeout: 1h
+      #     command: docker buildx build --ulimit nofile=1024000:1024000 --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
 
       - save_cache:
           paths:
