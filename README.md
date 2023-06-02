@@ -10,7 +10,7 @@ This project is capable of handling millions of pages per second efficiently.
 
 Make sure to have [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html) installed or Docker.
 
-A valid gRPC server on port `50051` following the [proto spec](https://github.com/a11ywatch/protobuf/blob/main/website.proto) is required to send data.
+This project requires that you start up another gRPC server on port `50051` following the [proto spec](https://github.com/a11ywatch/protobuf/blob/main/website.proto).
 
 The user agent is spoofed on each crawl to a random agent and the indexer extends [spider](https://github.com/spider-rs/spider) as the base.
 
