@@ -1,7 +1,5 @@
 # crawler
 
-[![A11yWatch](https://circleci.com/gh/a11ywatch/crawler.svg?style=svg)](https://circleci.com/gh/a11ywatch/crawler)
-
 A [gRPC](https://grpc.io/) web indexer turbo charged for performance. 
 
 This project is capable of handling millions of pages per second efficiently.

@@ -12,12 +12,12 @@ categories = ["accessibility", "asynchronous"]
 include = ["src/*", "build.rs", "proto/*", "LICENSE", "README.md"]
 
 [dependencies]
-tokio = { version = "^1.28.1", features = [ "rt-multi-thread", "macros", "sync", "time", "parking_lot" ] }
-tokio-stream = "0.1.12"
+tokio = { version = "^1.28.2", features = [ "rt-multi-thread", "macros", "sync", "time", "parking_lot" ] }
+tokio-stream = "0.1.14"
 tonic = { version = "0.9.1" }
 prost = "0.11.3"
 prost-types = "0.11.2"
-reqwest = { version = "0.11.16", features = ["brotli", "gzip", "native-tls-alpn", "socks", "stream"] }
+reqwest = { version = "0.11.18", features = ["brotli", "gzip", "native-tls-alpn", "socks", "stream"] }
 url = "2.3.1"
 regex = { version = "^1.5.0", optional = true }
 hashbrown = { version = "0.13.2" }
