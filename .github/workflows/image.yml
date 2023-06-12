@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-32vcpu-ubuntu-2204
     steps:
       - uses: docker/setup-qemu-action@v2.2.0
       - uses: docker/setup-buildx-action@v2.6.0
@@ -21,10 +21,10 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build and Push Latest (Alpine)
-        run: docker buildx build -m 5g --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
+        run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:latest -t $IMAGE_NAME:alpine --push . -f docker/Dockerfile
 
       - name: Build and Push (Debian)
-        run: docker buildx build -m 5g --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
+        run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:debian --push . -f docker/Dockerfile.debian
 
       - name: Build and Push (Ubuntu)
-        run: docker buildx build -m 5g --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
+        run: docker buildx build --platform $BUILDX_PLATFORMS -t $IMAGE_NAME:ubuntu --push . -f docker/Dockerfile.ubuntu
