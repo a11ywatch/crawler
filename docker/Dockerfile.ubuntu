@@ -1,4 +1,4 @@
-FROM ubuntu:23.04 AS builder
+FROM ubuntu:22.04 AS builder
 
 WORKDIR /app
 COPY ../ .
@@ -18,7 +18,7 @@ RUN rustup update
 
 RUN cargo install --path .
 
-FROM ubuntu:23.04
+FROM ubuntu:22.04
 
 RUN apt-get update && apt upgrade -y \
     && apt-get install -y --no-install-recommends build-essential \
