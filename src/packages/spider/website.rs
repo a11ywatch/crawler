@@ -369,22 +369,7 @@ impl Website {
         chandle: &Handle,
     ) {
         let mut set: JoinSet<HashSet<CaseInsensitiveString>> = JoinSet::new();
-        let mut links: HashSet<CaseInsensitiveString> = {
-            let mut cu: HashSet<CaseInsensitiveString> = self.links.drain().collect();
-
-            if self.is_allowed_default(&self.domain) {
-                let page = Page::new(&self.domain, &shared.0).await;
-
-                self.links_visited.insert(page.get_url().into());
-
-                self.rpc_callback(&rpcx, &shared, &mut set, &self.domain, user_id, chandle)
-                    .await;
-
-                cu.extend(page.links(&shared.1).await);
-            }
-
-            cu
-        };
+        let mut links: HashSet<CaseInsensitiveString> = self.links.drain().collect();
 
         loop {
             let stream =
