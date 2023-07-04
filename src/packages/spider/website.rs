@@ -261,13 +261,13 @@ impl Website {
         if self.domain_parsed.is_some() {
             let throttle = self.get_delay();
             let mut new_links: HashSet<CaseInsensitiveString> = HashSet::new();
-    
+
             let selectors = get_page_selectors(
                 &self.domain_parsed.as_ref().unwrap(),
                 self.configuration.subdomains,
                 self.configuration.tld,
             );
-    
+
             if selectors.is_some() {
                 let shared: Pin<Arc<(Client, (CompactString, SmallVec<[CompactString; 2]>))>> =
                     Arc::pin((client, unsafe { selectors.unwrap_unchecked() }));
@@ -275,10 +275,10 @@ impl Website {
                 while !self.links.is_empty() {
                     let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
                         unbounded_channel();
-    
+
                     let stream = tokio_stream::iter(&self.links).throttle(throttle);
                     tokio::pin!(stream);
-    
+
                     while let Some(link) = stream.next().await {
                         if !self.is_allowed(&link) {
                             continue;
@@ -286,34 +286,34 @@ impl Website {
                         log("fetch", &link);
                         self.links_visited.insert(link.clone());
                         let permit = SEM.acquire().await.unwrap();
-    
+
                         let tx = tx.clone();
                         let shared = shared.clone();
                         let link = link.clone();
-    
+
                         task::spawn(async move {
                             {
                                 let page = Page::new(&link.inner(), &shared.0).await;
                                 let links = page.links(&shared.1).await;
                                 drop(permit);
-    
+
                                 if let Err(_) = tx.send(links) {
                                     log("receiver dropped", "");
                                 }
                             }
                         });
                     }
-    
+
                     drop(tx);
-    
+
                     while let Some(msg) = rx.recv().await {
                         new_links.extend(msg);
                     }
-    
+
                     self.links.clone_from(&(&new_links - &self.links_visited));
-    
+
                     new_links.clear();
-    
+
                     if new_links.capacity() > 100 {
                         new_links.shrink_to_fit()
                     }
@@ -335,7 +335,7 @@ impl Website {
                 self.configuration.subdomains,
                 self.configuration.tld,
             );
-    
+
             if selectors.is_some() {
                 let shared: Shared = Arc::pin((
                     client,
@@ -345,9 +345,7 @@ impl Website {
                 let rpcx = Arc::new(rpcx);
                 let throttle = Box::pin(self.get_delay());
                 let chandle = Handle::current();
-    
-                task::yield_now().await;
-    
+
                 if self.configuration.sitemap {
                     self.sitemap_crawl(&shared, &rpcx, &throttle, user_id, &chandle)
                         .await;
@@ -423,8 +421,28 @@ impl Website {
         user_id: u32,
         chandle: &Handle,
     ) {
+        let domain = self.domain.as_str();
+
+        let (sitemap_path, needs_trailing) = match &self.configuration.sitemap_path {
+            Some(sitemap_path) => {
+                let sitemap_path = sitemap_path.as_str();
+
+                if domain.ends_with('/') && sitemap_path.starts_with('/') {
+                    (&sitemap_path[1..], false)
+                } else if !domain.ends_with('/')
+                    && !sitemap_path.is_empty()
+                    && !sitemap_path.starts_with('/')
+                {
+                    (sitemap_path, true)
+                } else {
+                    (sitemap_path, false)
+                }
+            }
+            _ => ("sitemap.xml", !domain.ends_with("/")),
+        };
+
         self.sitemap_url = Some(Box::new(
-            string_concat!(self.domain.as_str(), "sitemap.xml").into(),
+            string_concat!(domain, if needs_trailing { "/" } else { "" }, sitemap_path).into(),
         ));
 
         // init the base crawl and extend sitemap results after

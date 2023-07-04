@@ -88,11 +88,12 @@ You can use `Configuration` object to configure your crawler:
 ```rust
 // ..
 let mut website: Website = Website::new("https://choosealicense.com");
-website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".to_string());
+website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".into());
 website.configuration.respect_robots_txt = true;
 website.configuration.subdomains = true;
 website.configuration.tld = false;
 website.configuration.sitemap = false;
+website.configuration.sitemap_path = None; // Defaults to sitemap.xml
 website.configuration.proxy = "http://username:password@localhost:1234";
 website.configuration.delay = 0; // Defaults to 250 ms
 website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version
@@ -145,10 +146,11 @@ brew install protobuf
 ### Features
 
 `jemalloc` - use jemalloc memory allocator (default disabled).
+`regex` - use the regex crate for blacklist urls validation.
 
 ## About
 
-This crawler is optimized for reduced latency and uses isolated based concurrency as it can handle over 10,000 pages within seconds. In order to receive the links found for the crawler you need to add the [`website.proto`](./proto/website.proto) to your server. This is required since every request spawns a thread. Isolating the context drastically improves performance (preventing shared resources / communication ).
+This crawler is optimized for reduced latency and uses isolated based concurrency as it can handle over 10,000 pages within several milliseconds. In order to receive the links found for the crawler you need to add the [`website.proto`](./proto/website.proto) to your server. This is required since every request spawns a thread. Isolating the context drastically improves performance (preventing shared resources / communication ).
 
 ## Help
 
