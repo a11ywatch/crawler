@@ -64,31 +64,29 @@ pub fn get_page_selectors(
     subdomains: bool,
     tld: bool,
 ) -> Option<(CompactString, SmallVec<[CompactString; 2]>)> {
+    let host_name = CompactString::from(
+        match convert_abs_path(&host, Default::default()).host_str() {
+            Some(host) => host.to_ascii_lowercase(),
+            _ => Default::default(),
+        },
+    );
+    let scheme = host.scheme();
 
-            let host_name = CompactString::from(
-                match convert_abs_path(&host, Default::default()).host_str() {
-                    Some(host) => host.to_ascii_lowercase(),
-                    _ => Default::default(),
-                },
-            );
-            let scheme = host.scheme();
+    Some(if tld || subdomains {
+        let dname = domain_name(&host);
+        let scheme = host.scheme();
 
-            Some(if tld || subdomains {
-                let dname = domain_name(&host);
-                let scheme = host.scheme();
-
-                // static html group parse
-                (
-                    dname.into(),
-                    smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
-                )
-            } else {
-                (
-                    CompactString::default(),
-                    smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
-                )
-            })
-        
+        // static html group parse
+        (
+            dname.into(),
+            smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
+        )
+    } else {
+        (
+            CompactString::default(),
+            smallvec::SmallVec::from([host_name, CompactString::from(scheme)]),
+        )
+    })
 }
 
 /// Instantiate a new page without scraping it (used for testing purposes).

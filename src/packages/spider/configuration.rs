@@ -30,6 +30,8 @@ pub struct Configuration {
     pub sitemap: bool,
     /// Request max timeout per page
     pub request_timeout: Option<Box<Duration>>,
+    /// Sitemap path for domain.
+    pub sitemap_path: Option<Box<CompactString>>,
 }
 
 impl Configuration {
