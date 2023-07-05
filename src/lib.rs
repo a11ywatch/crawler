@@ -1,6 +1,8 @@
 extern crate sitemap;
 extern crate tokio;
 extern crate tonic;
+
+#[cfg(feature = "ua_generator")]
 extern crate ua_generator;
 
 // packages mainly for spider

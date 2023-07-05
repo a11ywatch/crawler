@@ -1,5 +1,5 @@
 use super::black_list::contains;
-use super::configuration::Configuration;
+use super::configuration::{Configuration, get_ua};
 use super::page::{build, get_page_selectors, Page};
 use super::robotparser::RobotFileParser;
 use super::utils::log;
@@ -28,7 +28,6 @@ use tokio::task;
 use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
-use ua_generator::ua::spoof_ua;
 use url::Url;
 
 /// Represents a website to crawl and gather all links.
@@ -194,7 +193,7 @@ impl Website {
             .pool_idle_timeout(None)
             .user_agent(match &self.configuration.user_agent {
                 Some(ua) => ua.as_str(),
-                _ => spoof_ua(),
+                _ => &get_ua(),
             })
             .brotli(true);
 

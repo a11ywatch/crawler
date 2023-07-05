@@ -44,3 +44,22 @@ impl Configuration {
         }
     }
 }
+
+/// get the user agent from the top agent list randomly.
+#[cfg(any(feature = "ua_generator"))]
+pub fn get_ua() -> &'static str {
+    ua_generator::ua::spoof_ua()
+}
+
+/// get the user agent via cargo package + version.
+#[cfg(not(any(feature = "ua_generator")))]
+pub fn get_ua() -> &'static str {
+    use std::env;
+
+    lazy_static! {
+        static ref AGENT: &'static str =
+            concat!(env!("CARGO_PKG_NAME"), '/', env!("CARGO_PKG_VERSION"));
+    };
+
+    AGENT.as_ref()
+}

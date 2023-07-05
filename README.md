@@ -147,6 +147,7 @@ brew install protobuf
 
 `jemalloc` - use jemalloc memory allocator (default disabled).
 `regex` - use the regex crate for blacklist urls validation.
+`ua_generator` - use the ua_generator crate to spoof random user agent.
 
 ## About
 
