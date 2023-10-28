@@ -53,7 +53,7 @@ path = "src/hc_client.rs"
 tonic-build = { version = "0.9.1", features = ["prost"] }
 quote = "1.0.23"
 failure_derive = "0.1.8"
-cc = "^1.0.13"
+cc = { version = "^1.0.83", features = ["parallel"] }
 rustc_version = "0.4.0"
 fs_extra = "^1.1"
 os_info = "3"
