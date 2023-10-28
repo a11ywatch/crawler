@@ -138,7 +138,13 @@ impl Page {
 
                         // determine if the crawl can continue based on host match
                         let mut can_process = match abs.host_str() {
-                            Some(host) => parent_host.ends_with(host),
+                            Some(host) => {
+                                if base_domain.is_empty() {
+                                    parent_host.eq(&host)
+                                } else {
+                                    parent_host.ends_with(host)
+                                }
+                            }
                             _ => false,
                         };
 
