@@ -60,44 +60,7 @@ This is a basic example crawling a web page, add spider to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-website_crawler = "0.8.3"
-```
-
-And then the code:
-
-```rust,no_run
-extern crate spider;
-
-use website_crawler::website::Website;
-use website_crawler::tokio;
-
-#[tokio::main]
-async fn main() {
-    let url = "https://choosealicense.com";
-    let mut website: Website = Website::new(&url);
-    website.crawl().await;
-
-    for page in website.get_pages() {
-        println!("- {}", page.get_url());
-    }
-}
-```
-
-You can use `Configuration` object to configure your crawler:
-
-```rust
-// ..
-let mut website: Website = Website::new("https://choosealicense.com");
-website.configuration.blacklist_url.push("https://choosealicense.com/licenses/".into());
-website.configuration.respect_robots_txt = true;
-website.configuration.subdomains = true;
-website.configuration.tld = false;
-website.configuration.sitemap = false;
-website.configuration.sitemap_path = None; // Defaults to sitemap.xml
-website.configuration.proxy = "http://username:password@localhost:1234";
-website.configuration.delay = 0; // Defaults to 250 ms
-website.configuration.user_agent = "myapp/version".to_string(); // Defaults to spider/x.y.z, where x.y.z is the library version
-website.crawl().await;
+website_crawler = "0.8.12"
 ```
 
 A basic [example](./examples/example.rs) can also be done with:
