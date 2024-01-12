@@ -6,7 +6,7 @@ use std::env::var;
 
 use tonic::{transport::Channel, Streaming};
 
-use crate::spider::utils::log;
+use spider::utils::log;
 
 // gRPC client
 pub use website::{

@@ -10,7 +10,7 @@ pub mod crawler {
 extern crate lazy_static;
 use crate::tokio::macros::support::Pin;
 use tokio::sync::mpsc;
-use tokio_stream::{wrappers::ReceiverStream, Stream, StreamExt};
+use spider::tokio_stream::{wrappers::ReceiverStream, Stream, StreamExt};
 use tonic::{Request, Response, Status};
 pub use website::website_service_server::{WebsiteService, WebsiteServiceServer};
 pub use website::{Empty, ScanInitParams, ScanParams, ScanStreamResponse};
@@ -73,7 +73,7 @@ impl WebsiteService for MyWebsiteService {
             message: req.domain,
         });
 
-        let mut stream = Box::pin(tokio_stream::iter(repeat));
+        let mut stream = Box::pin(spider::tokio_stream::iter(repeat));
         let (tx, rx) = mpsc::channel(1);
 
         match stream.next().await {

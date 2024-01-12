@@ -1,6 +1,6 @@
 [package]
 name = "website_crawler"
-version = "0.8.12"
+version = "0.9.0"
 authors = ["Jeff Mendez <jeff@a11ywatch.com>"]
 edition = "2021"
 description = "gRPC tokio based web crawler"
@@ -12,34 +12,14 @@ categories = ["accessibility", "asynchronous"]
 include = ["src/*", "build.rs", "proto/*", "LICENSE", "README.md"]
 
 [dependencies]
-tokio = { version = "1.33.0", features = [ "rt-multi-thread", "macros", "sync", "time", "parking_lot" ] }
-tokio-stream = "0.1.14"
+tokio = { version = "1.35.1", features = [ "rt-multi-thread", "macros", "sync", "time", "parking_lot" ] }
 tonic = { version = "0.9.2" }
 prost = "0.11.3"
 prost-types = "0.11.2"
-reqwest = { version = "0.11.18", features = ["deflate", "brotli", "gzip", "native-tls-alpn", "socks", "stream" ] }
-url = "2.4.0"
-regex = { version = "^1.5.0", optional = true }
-hashbrown = { version = "0.13.2" }
-log = "0.4.16"
 lazy_static = "1.4.0"
-ua_generator = { git = "https://github.com/a11ywatch/ua_generator.git", version = "0.3.5", optional = true }
-percent-encoding = "2.1.0"
 env_logger = "0.9.0"
 string_concat = "0.0.1"
-sitemap = "0.4.1"
-xml-rs = "0.8.4"
-compact_str = "0.7.1"
-selectors = "0.24.0"
-tendril = "0.4.3"
-ahash = "0.8.3"
-matches = "0.1.10"
-cssparser = "0.29.6"
-smallvec = "1.10.0"
-ego-tree = "0.6.2"
-fast_html5ever = "0.26.1"
-num_cpus = "1.15.0"
-case_insensitive_string = { version =  "0.1.6", features = ["compact"] }
+spider = { version = "1.80.68", features = ["sync", "control", "sitemap"]}
 
 [target.'cfg(all(not(target_os = "android"), not(target_os = "freebsd")))'.dependencies]
 jemallocator = { version = "0.5.0", optional = true }
@@ -60,5 +40,5 @@ os_info = "3"
 
 [features]
 jemalloc = ["jemallocator", "jemalloc-sys"]
-regex = ["dep:regex"]
-ua_generator = ["dep:ua_generator"]
+regex = ["spider/regex"]
+chrome = ["spider/chrome"]

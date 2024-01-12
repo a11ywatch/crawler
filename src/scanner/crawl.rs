@@ -1,6 +1,6 @@
-use crate::packages::spider::website::Website;
 use crate::rpc::client::monitor_page_async;
 use crate::rpc::client::website::ScanParams;
+use spider::website::Website;
 
 /// crawl all pages and gather links sending request back once finished. Built for CI usage.
 pub async fn crawl(
@@ -17,25 +17,30 @@ pub async fn crawl(
     let mut website: Website = Website::new(&domain);
 
     website.configuration.respect_robots_txt = respect_robots_txt;
-    website.configuration.delay = Box::new(delay);
+    website.configuration.delay = delay;
     website.configuration.subdomains = subdomains;
     website.configuration.tld = tld;
-    website.configuration.sitemap = sitemap;
 
     if !proxy.is_empty() {
-        website.configuration.proxy = Some(Box::new(proxy.into()));
+        website.configuration.proxies = Some(Box::new(Vec::from([proxy.into()])));
     }
 
     if !agent.is_empty() {
         website.configuration.user_agent = Some(Box::new(agent.into()));
     }
 
-    website.crawl().await;
+    if sitemap {
+        website.crawl_sitemap().await;
+        website.persist_links();
+        website.crawl().await;
+    } else {
+        website.crawl().await;
+    }
 
     let mut pages: Vec<String> = Vec::new();
 
-    for page in website.get_pages() {
-        pages.push(page.get_url().to_owned());
+    for page in website.get_links() {
+        pages.push(page.inner().to_string());
     }
 
     let web_site = ScanParams {
