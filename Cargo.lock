@@ -1882,9 +1882,9 @@ dependencies = [
 
 [[package]]
 name = "spider"
-version = "1.80.68"
+version = "1.80.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c21ae5ee676dcab8fa4e4c0ae17a0b19ab15842a5dc57604ea5138de45e4dac8"
+checksum = "f88af489c75e4ec56575ea444cc130c30331e69111d3b4a624a6a225e1abb1a1"
 dependencies = [
  "ahash",
  "bytes",
@@ -2498,7 +2498,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "cc",
  "env_logger",
