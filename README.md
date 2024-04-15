@@ -60,7 +60,7 @@ This is a basic example crawling a web page, add spider to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-website_crawler = "0.8.12"
+website_crawler = "0.9.4"
 ```
 
 A basic [example](./examples/example.rs) can also be done with:
@@ -108,9 +108,11 @@ brew install protobuf
 
 ### Features
 
-`jemalloc` - use jemalloc memory allocator (default disabled).
-`regex` - use the regex crate for blacklist urls validation.
-`ua_generator` - use the ua_generator crate to spoof random user agent.
+1. `jemalloc` - use jemalloc memory allocator (default disabled).
+1. `regex` - use the regex crate for blacklist urls validation.
+1. `ua_generator` - use the ua_generator crate to spoof random user agent.
+1. `smart` - use smart mode to run HTTP request first and chrome when JS is needed.
+1. `chrome`: Enables chrome headless rendering, use the env var `CHROME_URL` to connect remotely.
 
 ## About
 
