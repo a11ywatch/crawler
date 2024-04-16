@@ -1865,9 +1865,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.115"
+version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12dc5c46daa8e9fdf4f5e71b6cf9a53f2487da0e86e55808e2d35539666497dd"
+checksum = "3e17db7126d17feb94eb3fad46bf1a96b034e8aacbc2e775fe81505f8b0b2813"
 dependencies = [
  "itoa",
  "ryu",
@@ -1960,9 +1960,9 @@ dependencies = [
 
 [[package]]
 name = "spider"
-version = "1.93.0"
+version = "1.93.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "626597a84b1860f3fd287057cb1ded30c479658daba8d93adeb0db2e41a05fd1"
+checksum = "bef4512805c82459c45727bee94503396674e0368dbe5d1b6571276d7b772f16"
 dependencies = [
  "ahash",
  "bytes",
@@ -2588,7 +2588,7 @@ dependencies = [
 
 [[package]]
 name = "website_crawler"
-version = "0.9.4"
+version = "0.9.6"
 dependencies = [
  "cc",
  "env_logger",
